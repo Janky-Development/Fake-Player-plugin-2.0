@@ -13,9 +13,9 @@ All identifiers are prefixed with `%fpp_`.
 | `%fpp_network_count%` | Bots on other proxy servers (NETWORK mode only) |
 | `%fpp_max%` | Global bot cap (`∞` if unlimited) |
 | `%fpp_real%` | Real players online |
-| `%fpp_total%` | Total players (real + bots) on this server |
+| `%fpp_total%` | Real players on this server - **bots are never counted as players** |
 | `%fpp_online%` | Same as `%fpp_total%` |
-| `%fpp_network_total%` | **Total players (real + bots) across ALL servers** (NETWORK mode only; includes local + remote real players + all bots) |
+| `%fpp_network_total%` | Real players across ALL servers (NETWORK mode only; bots excluded) |
 | `%fpp_network_real%` | Total real players across ALL servers (NETWORK mode only) |
 | `%fpp_network_bots%` | Total bots across ALL servers (NETWORK mode only) |
 | `%fpp_frozen%` | Number of frozen bots |
@@ -68,6 +68,8 @@ All identifiers are prefixed with `%fpp_`.
 
 ## Ping (3 placeholders)
 
+> Bots never report a fabricated latency, so bot ping placeholders always read `0`.
+
 | Placeholder | Description |
 |-------------|-------------|
 | `%fpp_ping_all%` | If sender is a bot, returns bot's ping; otherwise sender's real ping |
@@ -80,7 +82,7 @@ All identifiers are prefixed with `%fpp_`.
 |-------------|-------------|
 | `%fpp_count_<world>%` | Bots in a specific world |
 | `%fpp_real_<world>%` | Real players in a specific world |
-| `%fpp_total_<world>%` | Total (real + bots) in a specific world |
+| `%fpp_total_<world>%` | Real players in a specific world (bots are never counted) |
 
 ## Player-Relative (13 placeholders)
 

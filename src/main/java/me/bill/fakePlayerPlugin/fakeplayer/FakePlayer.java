@@ -625,6 +625,15 @@ public final class FakePlayer {
         }
     }
 
+    /** The only name a bot is ever listed under in the tab list: {@code [Bot] - <botname>}. */
+    public static String tabListName(String botName) {
+        return "[Bot] - " + botName;
+    }
+
+    public String getTabListName() {
+        return tabListName(getName());
+    }
+
     public int getBasePing() {
         return basePing;
     }
@@ -757,6 +766,17 @@ public final class FakePlayer {
 
     public void setRestoredSpawn(boolean restoredSpawn) {
         this.restoredSpawn = restoredSpawn;
+    }
+
+    /** The activity (top) and owner (bottom) rows; the primary entity is the name (middle) row. */
+    private volatile java.util.List<Entity> nametagExtraEntities = java.util.List.of();
+
+    public java.util.List<Entity> getNametagExtraEntities() {
+        return nametagExtraEntities;
+    }
+
+    public void setNametagExtraEntities(java.util.List<Entity> entities) {
+        this.nametagExtraEntities = entities == null ? java.util.List.of() : java.util.List.copyOf(entities);
     }
 
     public Entity getNametagEntity() {

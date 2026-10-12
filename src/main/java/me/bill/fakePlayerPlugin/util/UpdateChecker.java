@@ -23,10 +23,18 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 public final class UpdateChecker {
 
-    private static final String MODRINTH_API =
-            "https://api.modrinth.com/v2/project/fake-player-plugin-(fpp)/version?limit=1";
+    private static final String MODRINTH_SLUG = "fake-player-plugin-fpp";
 
-    private static final String MODRINTH_PAGE = "https://modrinth.com/plugin/fake-player-plugin-(fpp)";
+    /** Newest first. A handful is enough to find the latest release even if betas are mixed in. */
+    private static final String MODRINTH_API =
+            "https://api.modrinth.com/v2/project/" + MODRINTH_SLUG + "/version?limit=10";
+
+    private static final String MODRINTH_PAGE = "https://modrinth.com/plugin/" + MODRINTH_SLUG;
+
+    /** Only ever downloaded from Modrinth's own CDN, over https. */
+    private static final String MODRINTH_CDN_HOST = "cdn.modrinth.com";
+
+    private static final long MAX_JAR_BYTES = 64L * 1024 * 1024;
 
     private static final String VERCEL_API_BASE = "https://fpp.wtf";
 
@@ -109,6 +117,8 @@ public final class UpdateChecker {
                 fpp.setLatestKnownVersion(latestClean);
             }
 
+            if (Config.updateCheckerAutoUpdate()) stageUpdate(plugin, info, latestClean);
+
         } else if (isBeta) {
 
             FppLogger.warn("Running BETA v"
@@ -144,6 +154,123 @@ public final class UpdateChecker {
         }
     }
 
+    // ── auto update ──────────────────────────────────────────────────────────────────────────
+
+    private static final java.util.concurrent.atomic.AtomicReference<String> stagedVersion =
+            new java.util.concurrent.atomic.AtomicReference<>();
+
+    /**
+     * Downloads the latest release into the server's update folder under the <em>same file name as
+     * the running jar</em>. Paper/Bukkit replace a plugin jar with the same-named file from
+     * {@code plugins/update} on the next start, so the new version goes live on the next restart
+     * without anything being swapped while the server is running.
+     *
+     * <p>Safety: the file must come from Modrinth's CDN over https, be a plain {@code .jar} within a
+     * size limit, and match the SHA-512 Modrinth publishes for it; anything else is discarded.
+     */
+    private static void stageUpdate(Plugin plugin, UpdateInfo info, String latestClean) {
+        if (!(plugin instanceof FakePlayerPlugin fpp)) return;
+        if (info.sha512 == null || info.sha512.isBlank() || info.downloadUrl == null) {
+            FppLogger.warn("Auto-update skipped: no verifiable file in the Modrinth response.");
+            return;
+        }
+        if (latestClean.equals(stagedVersion.get())) return; // already downloaded this run
+        final java.net.URI uri;
+        try {
+            uri = URI.create(info.downloadUrl);
+        } catch (IllegalArgumentException e) {
+            return;
+        }
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !MODRINTH_CDN_HOST.equalsIgnoreCase(uri.getHost())) {
+            FppLogger.warn("Auto-update skipped: download host '" + uri.getHost() + "' is not " + MODRINTH_CDN_HOST);
+            return;
+        }
+        if (info.fileSize > MAX_JAR_BYTES) {
+            FppLogger.warn("Auto-update skipped: file is unexpectedly large (" + info.fileSize + " bytes).");
+            return;
+        }
+
+        FppScheduler.runAsync(plugin, () -> {
+            try {
+                java.io.File running = fpp.getPluginJar();
+                java.io.File updateDir = org.bukkit.Bukkit.getUpdateFolderFile();
+                if (running == null || updateDir == null) return;
+                if (!updateDir.isDirectory() && !updateDir.mkdirs()) return;
+
+                java.io.File target = new java.io.File(updateDir, running.getName());
+                java.io.File tmp = new java.io.File(updateDir, running.getName() + ".part");
+
+                // Already staged by an earlier run (same content) - nothing to do.
+                if (target.isFile() && info.sha512.equalsIgnoreCase(sha512Of(target))) {
+                    stagedVersion.set(latestClean);
+                    FppLogger.info("Update v" + latestClean + " is already staged; it installs on the next restart.");
+                    return;
+                }
+
+                HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
+                conn.setConnectTimeout(10_000);
+                conn.setReadTimeout(30_000);
+                conn.setRequestProperty(
+                        "User-Agent",
+                        "FakePlayerPlugin-AutoUpdate/" + info.current + " (" + MODRINTH_PAGE + ")");
+                if (conn.getResponseCode() != 200) {
+                    FppLogger.warn("Auto-update download failed: HTTP " + conn.getResponseCode());
+                    return;
+                }
+
+                java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-512");
+                long total = 0;
+                try (java.io.InputStream in = conn.getInputStream();
+                        java.io.OutputStream out = new java.io.FileOutputStream(tmp)) {
+                    byte[] buf = new byte[16 * 1024];
+                    int n;
+                    while ((n = in.read(buf)) != -1) {
+                        total += n;
+                        if (total > MAX_JAR_BYTES) throw new java.io.IOException("download exceeds size limit");
+                        md.update(buf, 0, n);
+                        out.write(buf, 0, n);
+                    }
+                }
+
+                String actual = java.util.HexFormat.of().formatHex(md.digest());
+                if (!actual.equalsIgnoreCase(info.sha512)) {
+                    //noinspection ResultOfMethodCallIgnored
+                    tmp.delete();
+                    FppLogger.warn("Auto-update discarded: SHA-512 of the download did not match Modrinth's.");
+                    return;
+                }
+
+                java.nio.file.Files.move(
+                        tmp.toPath(),
+                        target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                stagedVersion.set(latestClean);
+                FppLogger.success("Update v" + latestClean + " downloaded and verified - it will be installed"
+                        + " when the server restarts (plugins/update/" + target.getName() + ").");
+                FppScheduler.runSync(plugin, () -> {
+                    Component note = Component.text(
+                            "FPP v" + latestClean + " was downloaded and will be installed on the next restart.");
+                    for (Player p : plugin.getServer().getOnlinePlayers()) {
+                        if (Perm.has(p, Perm.OP)) p.sendMessage(note);
+                    }
+                });
+            } catch (Exception e) {
+                FppLogger.warn("Auto-update failed: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
+        });
+    }
+
+    private static String sha512Of(java.io.File f) throws Exception {
+        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-512");
+        try (java.io.InputStream in = new java.io.FileInputStream(f)) {
+            byte[] buf = new byte[16 * 1024];
+            int n;
+            while ((n = in.read(buf)) != -1) md.update(buf, 0, n);
+        }
+        return java.util.HexFormat.of().formatHex(md.digest());
+    }
+
     public static void invalidateCache() {
         cachedResult = null;
         cacheTimestamp = 0L;
@@ -157,6 +284,10 @@ public final class UpdateChecker {
         public boolean currentStartsWithV;
         public String error;
         public String downloadUrl;
+        /** Primary file of the latest release - set only for Modrinth results. */
+        public String fileName;
+        public String sha512;
+        public long fileSize;
     }
 
     private static UpdateInfo fetchOrCached(Plugin plugin) {
@@ -255,7 +386,7 @@ public final class UpdateChecker {
                     "User-Agent",
                     "FakePlayerPlugin-UpdateChecker/"
                             + currentVersion
-                            + " (https://modrinth.com/plugin/fake-player-plugin-(fpp))");
+                            + " (" + MODRINTH_PAGE + ")");
 
             int code = conn.getResponseCode();
             if (code != 200) {
@@ -279,16 +410,21 @@ public final class UpdateChecker {
 
             if (arrayResponse) {
 
-                String firstObj = extractFirstArrayElement(body);
-                if (firstObj == null) {
-                    info.error = "empty version array from " + url;
+                com.google.gson.JsonObject chosen = pickLatestRelease(body);
+                if (chosen == null) {
+                    info.error = "no usable version in response from " + url;
                     return info;
                 }
-                latest = extractJsonString(firstObj, "version_number");
-                downloadUrl = extractFirstFileUrl(firstObj);
-
-                if (downloadUrl == null || downloadUrl.isBlank()) {
-                    downloadUrl = MODRINTH_PAGE;
+                latest = chosen.get("version_number").getAsString();
+                downloadUrl = MODRINTH_PAGE;
+                com.google.gson.JsonObject file = pickPrimaryJar(chosen);
+                if (file != null) {
+                    downloadUrl = file.get("url").getAsString();
+                    info.fileName = file.has("filename") ? file.get("filename").getAsString() : null;
+                    info.fileSize = file.has("size") ? file.get("size").getAsLong() : 0L;
+                    if (file.has("hashes") && file.getAsJsonObject("hashes").has("sha512")) {
+                        info.sha512 = file.getAsJsonObject("hashes").get("sha512").getAsString();
+                    }
                 }
             } else {
 
@@ -312,6 +448,39 @@ public final class UpdateChecker {
             info.error = e.getClass().getSimpleName() + ": " + e.getMessage() + " - " + url;
         }
         return info;
+    }
+
+    /** First "release" in the (newest-first) list; the newest entry if the list has no release. */
+    private static com.google.gson.JsonObject pickLatestRelease(String body) {
+        try {
+            com.google.gson.JsonArray arr =
+                    com.google.gson.JsonParser.parseString(body).getAsJsonArray();
+            com.google.gson.JsonObject first = null;
+            for (com.google.gson.JsonElement el : arr) {
+                if (!el.isJsonObject()) continue;
+                com.google.gson.JsonObject o = el.getAsJsonObject();
+                if (!o.has("version_number")) continue;
+                if (first == null) first = o;
+                if (o.has("version_type") && "release".equals(o.get("version_type").getAsString())) return o;
+            }
+            return first;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static com.google.gson.JsonObject pickPrimaryJar(com.google.gson.JsonObject version) {
+        if (!version.has("files")) return null;
+        com.google.gson.JsonObject firstJar = null;
+        for (com.google.gson.JsonElement el : version.getAsJsonArray("files")) {
+            if (!el.isJsonObject()) continue;
+            com.google.gson.JsonObject f = el.getAsJsonObject();
+            String name = f.has("filename") ? f.get("filename").getAsString() : "";
+            if (!name.toLowerCase(java.util.Locale.ROOT).endsWith(".jar") || !f.has("url")) continue;
+            if (f.has("primary") && f.get("primary").getAsBoolean()) return f;
+            if (firstJar == null) firstJar = f;
+        }
+        return firstJar;
     }
 
     private static String extractFirstArrayElement(String body) {

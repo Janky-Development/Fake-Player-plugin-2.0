@@ -289,7 +289,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                 .append(Component.text("Modrinth")
                         .color(ACCENT)
                         .decorate(TextDecoration.UNDERLINED)
-                        .clickEvent(ClickEvent.openUrl("https://modrinth.com/plugin/fake-player-plugin-(fpp)"))
+                        .clickEvent(ClickEvent.openUrl("https://modrinth.com/plugin/fake-player-plugin-fpp"))
                         .hoverEvent(HoverEvent.showText(
                                 Component.text("Click to open Modrinth").color(GRAY))))
                 .append(Component.text(", ").color(GRAY))

@@ -852,6 +852,11 @@ public final class NmsPlayerSpawner {
                         Config.debugNmsBot(),
                         "Removing bot '" + name + "' (uuid=" + uuid + ") - reason: " + reason);
 
+                // Exactly as for a real player: the vehicle the bot is alone in goes with it
+                // (PlayerList.remove does that) and is remembered so it can be restored on respawn.
+                BotMountMemory.capture(player);
+                BotAutoMount.beginRemoval(uuid);
+
                 if (saveData) {
                     try {
                         player.saveData();
@@ -919,6 +924,8 @@ public final class NmsPlayerSpawner {
             FppLogger.error("NmsPlayerSpawner.removeFakePlayer failed for " + player.getName() + " (reason: " + reason
                     + "): " + e.getMessage());
             FppLogger.debug(Arrays.toString(e.getStackTrace()));
+        } finally {
+            BotAutoMount.endRemoval(player.getUniqueId());
         }
     }
 

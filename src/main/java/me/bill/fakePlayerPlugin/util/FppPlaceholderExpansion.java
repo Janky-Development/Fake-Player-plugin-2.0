@@ -84,13 +84,15 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
             case "network_count" -> String.valueOf(remoteBots);
             case "max" -> Config.maxBots() == 0 ? "∞" : String.valueOf(Config.maxBots());
             case "real" -> String.valueOf(real);
-            case "total", "online" -> String.valueOf(real + bots);
+            // Bots are never counted as players: "online"/"total" are real players only, so these
+            // placeholders cannot be used to inflate a displayed player count.
+            case "total", "online" -> String.valueOf(real);
             case "network_total" -> {
                 var cache = plugin.getRemoteBotCache();
                 if (cache != null && cache.hasNetworkStats()) {
-                    yield String.valueOf(cache.getNetworkTotalPlayers());
+                    yield String.valueOf(Math.max(0, cache.getNetworkTotalPlayers() - cache.getNetworkTotalBots()));
                 }
-                yield String.valueOf(real + bots);
+                yield String.valueOf(real);
             }
             case "network_real" -> {
                 var cache = plugin.getRemoteBotCache();
@@ -272,7 +274,7 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
             return String.valueOf(countRealInWorld(p.substring(5)));
         }
         if (p.startsWith("total_")) {
-            return String.valueOf(countBotsInWorld(p.substring(6)) + countRealInWorld(p.substring(6)));
+            return String.valueOf(countRealInWorld(p.substring(6)));
         }
         if (p.startsWith("user_count_")) {
             if (player == null) return "0";

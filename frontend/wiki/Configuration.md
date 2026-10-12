@@ -66,6 +66,25 @@ Seconds between `/fpp spawn` uses. `0` = disabled.
 - `kill-message: false` - broadcast when a real player kills a bot
 - `notify-admins-on-join: true` - send compatibility warnings to admins on join
 
+### `tab-list`
+- `enabled: false` - show bots in the tab list. Off by default. When on, a bot is **only ever** listed as
+  `[Bot] - <botname>` (enforced at packet level for every viewer, including the server's own join sync).
+  Toggle live in `/fpp settings` → Body.
+
+### `nametag`
+- `second-line.format: '<#BAFF4F>ʙᴏᴛ ʙʏ {owner}</#BAFF4F>'` - the mandatory bottom row (cannot be disabled).
+  `{owner}` = the player/console that spawned the bot
+- `second-line.y-offset: 1.9` - blocks above the bot's feet where the tag block starts
+- `second-line.row-spacing: 0.3` - blocks between the three rows (activity / name / owner)
+- `second-line.background-opacity: 0.25` - each row's black plate, `0.0`-`1.0` (`0.25` = vanilla name tag)
+- `second-line.interpolation-ticks: 3` - follow smoothing (snaps while a bot is riding)
+
+### `update-checker`
+- `enabled: true` - check Modrinth (`fake-player-plugin-fpp`) for a newer release
+- `auto-update: true` - download it to `plugins/update/` under this jar's file name, verify Modrinth's
+  SHA-512, and let the server install it on the next restart. Nothing is replaced while running.
+  Set `false` to only be notified
+
 ### `metrics`
 - `enabled: true` - anonymous FastStats usage statistics
 
@@ -78,6 +97,9 @@ Seconds between `/fpp spawn` uses. `0` = disabled.
 - `damageable: true` - take all damage (if `false`, still takes environmental)
 - `pick-up-items: true`
 - `pick-up-xp: true`
+- `auto-mount: true` - boats and moving rideable minecarts that run into a bot pick it up, like vanilla
+  mobs. A bot stays seated unless deliberately dismounted (`/fpp sneak`), and a real player entering a boat
+  always gets the first seat. Toggle live in `/fpp settings` → Body
 - `drop-items-on-despawn: false` - `true` drops inventory on despawn; `false` keeps it
 
 ### `combat`

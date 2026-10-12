@@ -41,6 +41,11 @@ public class PlayerJoinListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onJoinEarly(PlayerJoinEvent event) {
 
+        // Earliest point a real viewer's connection can be guarded: still before the server sends
+        // them the existing players' tab-list entries, so bots are never listed to them under a
+        // bare name even for a frame.
+        me.bill.fakePlayerPlugin.fakeplayer.PacketHelper.installViewerGuard(event.getPlayer());
+
         UUID uuid = event.getPlayer().getUniqueId();
         Location requestedSpawn = NmsPlayerSpawner.consumePendingSpawnLocation(uuid);
         if (requestedSpawn != null && requestedSpawn.getWorld() != null) {

@@ -450,7 +450,13 @@ public final class VelocityChannel implements PluginMessageListener {
         if (Config.tabListEnabled()) {
             for (Player online : Bukkit.getOnlinePlayers()) {
                 PacketHelper.sendTabListAddRaw(
-                        online, uuid, safePacketName, displayName, skinValue, skinSignature, ping);
+                        online,
+                        uuid,
+                        safePacketName,
+                        FakePlayer.tabListName(name),
+                        skinValue,
+                        skinSignature,
+                        ping);
             }
         }
     }
@@ -551,7 +557,8 @@ public final class VelocityChannel implements PluginMessageListener {
 
         if (Config.tabListEnabled()) {
             for (Player online : Bukkit.getOnlinePlayers()) {
-                PacketHelper.sendTabListDisplayNameUpdate(online, uuid, newDisplayName, existing.ping());
+                PacketHelper.sendTabListDisplayNameUpdate(
+                        online, uuid, FakePlayer.tabListName(existing.name()), existing.ping());
             }
         }
     }

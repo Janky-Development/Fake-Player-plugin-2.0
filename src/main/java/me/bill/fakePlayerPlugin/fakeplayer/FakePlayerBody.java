@@ -25,11 +25,13 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import me.bill.fakePlayerPlugin.FakePlayerPlugin;
 import me.bill.fakePlayerPlugin.config.Config;
 import me.bill.fakePlayerPlugin.util.AttributeCompat;
+import me.bill.fakePlayerPlugin.fakeplayer.network.ViewerPacketGuard;
 import me.bill.fakePlayerPlugin.util.FppLogger;
 import me.bill.fakePlayerPlugin.util.FppScheduler;
 import me.bill.fakePlayerPlugin.util.TextUtil;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.minecraft.server.MinecraftServer;
@@ -60,6 +62,13 @@ public final class FakePlayerBody {
     /** Viewers (real players) who have already been sent the team-create packet for {@link #hideTeam}. */
     private static final Set<UUID> viewersKnowingTeam = ConcurrentHashMap.newKeySet();
 
+    /**
+     * Names whose vanilla name tag must never be shown to any viewer. Registered before the body is
+     * even created and kept until it is removed; {@link ViewerPacketGuard} refuses to let any other
+     * team packet pull these entries off {@link #HIDDEN_NAME_TEAM} on a client.
+     */
+    private static final Set<String> protectedNames = ConcurrentHashMap.newKeySet();
+
     private FakePlayerBody() {}
 
     private static PlayerTeam hideTeam() {
@@ -73,6 +82,7 @@ public final class FakePlayerBody {
                 team.setNameTagVisibility(Team.Visibility.NEVER);
                 team.setCollisionRule(Team.CollisionRule.ALWAYS);
                 hideTeam = team;
+                ViewerPacketGuard.protect(team, protectedNames);
             } catch (Throwable t2) {
                 FppLogger.warn("FakePlayerBody: failed to build hide-nametag team (vanilla names will show): " + t2.getMessage());
             }
@@ -116,6 +126,8 @@ public final class FakePlayerBody {
             return null;
         }
 
+        protectedNames.add(fp.getName());
+        guardAllViewers();
         try {
             FppLogger.debug("FakePlayerBody.spawn: START for '" + fp.getName() + "' at " + loc + " (Folia="
                     + NmsPlayerSpawner.isFoliaServer() + ")");
@@ -162,6 +174,8 @@ public final class FakePlayerBody {
             callback.accept(null);
             return;
         }
+        protectedNames.add(fp.getName());
+        guardAllViewers();
         NmsPlayerSpawner.spawnFakePlayerAsync(
                 fp.getUuid(),
                 fp.getName(),
@@ -192,11 +206,35 @@ public final class FakePlayerBody {
                 });
     }
 
+    /**
+     * Puts the packet guard on every real viewer before a bot is created, so the server's own
+     * "player joined" tab entry for the bot is already rewritten when it is broadcast.
+     */
+    private static void guardAllViewers() {
+        for (Player viewer : Bukkit.getOnlinePlayers()) PacketHelper.installViewerGuard(viewer);
+    }
+
     private static boolean shouldLoadSavedPlayerData(FakePlayer fp) {
         return fp != null && Boolean.TRUE.equals(fp.getMetadata("fpp.explicit-uuid-spawn"));
     }
 
     private static void finalizeSpawnedBody(FakePlayer fp, Player player) {
+        // Hide the vanilla name tag the moment the body exists - not only when the text_display
+        // spawns - so there is no window (or failure path) where the real name tag can render.
+        protectedNames.add(fp.getName());
+        hideVanillaName(fp);
+        try {
+            FakePlayerPlugin pl = FakePlayerPlugin.getInstance();
+            if (pl != null && pl.getFakePlayerManager() != null) pl.getFakePlayerManager().unlistBotEverywhere(fp);
+        } catch (Throwable ignored) {
+        }
+        if (Config.tabListEnabled()) {
+            try {
+                player.playerListName(Component.text(fp.getTabListName()));
+            } catch (Throwable t) {
+                FppLogger.debug("FakePlayerBody: list name failed for " + fp.getName() + ": " + t);
+            }
+        }
         try {
             if (FakePlayerManager.FAKE_PLAYER_KEY != null) {
                 player.getPersistentDataContainer().remove(new NamespacedKey(FakePlayerPlugin.getInstance(), "npc"));
@@ -400,8 +438,20 @@ public final class FakePlayerBody {
     public static void removeNametag(FakePlayer fp) {
         if (fp == null) return;
         unhideVanillaName(fp);
+        removeNametagEntity(fp);
+    }
+
+    /** Removes only the text_display; the vanilla name stays hidden (no flicker on respawn/refresh). */
+    private static void removeNametagEntity(FakePlayer fp) {
+        if (fp == null) return;
+        for (Entity extra : fp.getNametagExtraEntities()) removeEntityQuietly(extra);
+        fp.setNametagExtraEntities(null);
         Entity tag = fp.getNametagEntity();
         fp.setNametagEntity(null);
+        removeEntityQuietly(tag);
+    }
+
+    private static void removeEntityQuietly(Entity tag) {
         if (tag == null) return;
         if (NmsPlayerSpawner.isFoliaServer()) {
             FakePlayerPlugin plugin = FakePlayerPlugin.getInstance();
@@ -421,45 +471,73 @@ public final class FakePlayerBody {
         }
     }
 
+    /** Row indices, bottom to top. */
+    private static final int ROW_OWNER = 0;
+    private static final int ROW_NAME = 1;
+    private static final int ROW_ACTIVITY = 2;
+
     /**
-     * Spawns the mannequin-style name tag (a {@link TextDisplay}) that carries BOTH rows - the bot's
-     * name and the configured indicator (default {@code bot by <owner>}) - and hides the bot's vanilla
-     * over-head name so it does not overlay the display.
+     * Spawns the name tag as three separate {@link TextDisplay} rows - activity (top), name
+     * (middle) and the mandatory "bot by &lt;owner&gt;" disclosure (bottom) - each with its own
+     * background plate, like stacked vanilla name tags, and hides the bot's vanilla over-head name.
+     * The name row is the primary entity ({@link FakePlayer#getNametagEntity()}); the other two are
+     * kept in {@link FakePlayer#getNametagExtraEntities()}.
      */
     public static Entity spawnNametag(FakePlayer fp, Entity body) {
         if (fp == null || body == null || !Config.nametagSecondLineEnabled()) return null;
         Location base = body.getLocation();
         if (base.getWorld() == null) return null;
-        removeNametag(fp);
+        removeNametagEntity(fp);
         try {
             hideVanillaName(fp);
-            int interp = Math.max(0, Config.nametagInterpolationTicks());
-            Location loc = base.clone().add(0, Config.nametagSecondLineYOffset(), 0);
-            TextDisplay display = base.getWorld().spawn(loc, TextDisplay.class, td -> {
-                td.text(buildNametagComponent(fp));
-                td.setBillboard(Display.Billboard.CENTER);
-                td.setSeeThrough(false);
-                td.setShadowed(false);
-                td.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
-                td.setPersistent(false);
-                td.setInvulnerable(true);
-                // Interpolate to each new position so it follows the bot smoothly instead of jumping
-                // (matched to the client-side entity lerp FPP uses for the bot's movement).
-                td.setTeleportDuration(interp);
-                if (FakePlayerManager.FAKE_PLAYER_KEY != null) {
-                    td.getPersistentDataContainer()
-                            .set(
-                                    FakePlayerManager.FAKE_PLAYER_KEY,
-                                    PersistentDataType.STRING,
-                                    NAMETAG_PDC_VALUE + ":" + fp.getName());
-                }
-            });
-            fp.setNametagEntity(display);
-            return display;
+            TextDisplay owner = spawnRow(fp, base, ROW_OWNER);
+            TextDisplay name = spawnRow(fp, base, ROW_NAME);
+            TextDisplay activity = spawnRow(fp, base, ROW_ACTIVITY);
+            fp.setNametagExtraEntities(java.util.List.of(activity, owner));
+            fp.setNametagEntity(name);
+            return name;
         } catch (Throwable e) {
             FppLogger.debug("FakePlayerBody.spawnNametag failed for " + fp.getName() + ": " + e.getMessage());
+            removeNametagEntity(fp);
             return null;
         }
+    }
+
+    private static TextDisplay spawnRow(FakePlayer fp, Location base, int row) {
+        int interp = Math.max(0, Config.nametagInterpolationTicks());
+        Location loc = rowLocation(base, row);
+        return base.getWorld().spawn(loc, TextDisplay.class, td -> {
+            td.text(buildRow(fp, row));
+            td.setBillboard(Display.Billboard.CENTER);
+            td.setSeeThrough(false);
+            td.setShadowed(false);
+            // Each row has its own translucent black plate, like a vanilla name tag.
+            td.setBackgroundColor(Color.fromARGB(Config.nametagBackgroundAlpha(), 0, 0, 0));
+            td.setPersistent(false);
+            td.setInvulnerable(true);
+            td.setTeleportDuration(interp);
+            if (FakePlayerManager.FAKE_PLAYER_KEY != null) {
+                td.getPersistentDataContainer()
+                        .set(
+                                FakePlayerManager.FAKE_PLAYER_KEY,
+                                PersistentDataType.STRING,
+                                NAMETAG_PDC_VALUE + ":" + fp.getName());
+            }
+        });
+    }
+
+    private static Location rowLocation(Location botLoc, int row) {
+        return botLoc.clone().add(0, Config.nametagSecondLineYOffset() + row * Config.nametagRowSpacing(), 0);
+    }
+
+    /** True while every row of the tag still exists in the world. */
+    public static boolean nametagIntact(FakePlayer fp) {
+        Entity primary = fp.getNametagEntity();
+        if (primary == null || !primary.isValid()) return false;
+        java.util.List<Entity> extras = fp.getNametagExtraEntities();
+        if (extras.size() != 2) return false;
+        for (Entity e : extras) if (e == null || !e.isValid()) return false;
+        return true;
     }
 
     /**
@@ -474,16 +552,25 @@ public final class FakePlayerBody {
         // refresh (every ~10 ticks, driven by the activity-label loop) in case the one-time hide at
         // spawn didn't stick (e.g. a scoreboard that wasn't ready yet, or a missed broadcast).
         hideVanillaName(fp);
-        if (!(fp.getNametagEntity() instanceof TextDisplay td)) return;
+        updateRow(fp, fp.getNametagEntity(), ROW_NAME);
+        java.util.List<Entity> extras = fp.getNametagExtraEntities();
+        if (extras.size() == 2) {
+            updateRow(fp, extras.get(0), ROW_ACTIVITY);
+            updateRow(fp, extras.get(1), ROW_OWNER);
+        }
+    }
+
+    private static void updateRow(FakePlayer fp, Entity entity, int row) {
+        if (!(entity instanceof TextDisplay td)) return;
         if (NmsPlayerSpawner.isFoliaServer()) {
             FakePlayerPlugin plugin = FakePlayerPlugin.getInstance();
             if (plugin == null) return;
             FppScheduler.runAtEntity(plugin, td, () -> {
-                if (td.isValid()) td.text(buildNametagComponent(fp));
+                if (td.isValid()) td.text(buildRow(fp, row));
             });
             return;
         }
-        if (td.isValid()) td.text(buildNametagComponent(fp));
+        if (td.isValid()) td.text(buildRow(fp, row));
     }
 
     /**
@@ -542,6 +629,7 @@ public final class FakePlayerBody {
     private static void unhideVanillaNameNow(FakePlayer fp) {
         try {
             String name = fp.getName();
+            protectedNames.remove(name);
             // removeNametag() (and therefore this) unconditionally runs before EVERY spawn, including
             // a bot's very first one - where its name was never added to any client's team roster.
             // The vanilla client's Scoreboard#removePlayerFromTeam throws (and disconnects!) if asked
@@ -558,17 +646,34 @@ public final class FakePlayerBody {
         }
     }
 
-    /** Keeps the second-line display glued below the moving bot. Called from the tick loop. */
+    /** Keeps every row of the tag glued above the moving bot. Called from the tick loop. */
     public static void moveNametag(FakePlayer fp, Location botLoc) {
         if (fp == null || botLoc == null) return;
-        Entity tag = fp.getNametagEntity();
-        if (tag == null) return;
-        if (!tag.isValid()) {
+        Entity primary = fp.getNametagEntity();
+        if (primary == null) return;
+        if (!primary.isValid()) {
             fp.setNametagEntity(null);
             return;
         }
-        Location target = botLoc.clone().add(0, Config.nametagSecondLineYOffset(), 0);
+        Player body = fp.getPlayer();
+        boolean riding = body != null && body.isInsideVehicle();
+        moveRow(primary, rowLocation(botLoc, ROW_NAME), riding);
+        java.util.List<Entity> extras = fp.getNametagExtraEntities();
+        if (extras.size() == 2) {
+            moveRow(extras.get(0), rowLocation(botLoc, ROW_ACTIVITY), riding);
+            moveRow(extras.get(1), rowLocation(botLoc, ROW_OWNER), riding);
+        }
+    }
+
+    private static void moveRow(Entity tag, Location target, boolean riding) {
+        if (tag == null || !tag.isValid()) return;
         try {
+            // A passenger is positioned by its vehicle every tick; smoothing the tag over several
+            // ticks on top of that makes it visibly trail behind. Snap (1 tick) while riding.
+            if (tag instanceof TextDisplay td) {
+                int want = riding ? 1 : Math.max(0, Config.nametagInterpolationTicks());
+                if (td.getTeleportDuration() != want) td.setTeleportDuration(want);
+            }
             if (NmsPlayerSpawner.isFoliaServer() || tag.getWorld() != target.getWorld()) {
                 tag.teleportAsync(target);
             } else {
@@ -578,27 +683,32 @@ public final class FakePlayerBody {
         }
     }
 
-    private static Component buildNametagComponent(FakePlayer fp) {
+    private static Component buildRow(FakePlayer fp, int row) {
         String owner = fp.getSpawnedBy() != null && !fp.getSpawnedBy().isBlank() ? fp.getSpawnedBy() : "?";
-        String rawName = fp.getRawDisplayName() != null ? fp.getRawDisplayName() : fp.getDisplayName();
         Component indicatorRow =
                 TextUtil.colorize(Config.nametagSecondLineFormat().replace("{owner}", owner));
-        // Rows below inherit color from whatever they're appended onto, so give each an explicit
-        // color instead of relying on defaults - otherwise a colorless row picks up its parent's.
-        Component nameRow = TextUtil.colorize(rawName != null && !rawName.isBlank() ? rawName : fp.getName());
-        if (nameRow.color() == null) nameRow = nameRow.color(TextColor.fromHexString("#EEECF7"));
-        TextColor indicatorColor =
-                indicatorRow.color() != null ? indicatorRow.color() : TextColor.fromHexString("#9691AB");
-        Component actionRow = Component.text(BotActivity.currentLabel(fp))
-                .color(indicatorColor)
-                .decoration(TextDecoration.ITALIC, true);
-        // Root is colorless so each row keeps its own explicit color instead of inheriting one.
-        return Component.empty()
-                .append(actionRow)
-                .append(Component.newline())
-                .append(nameRow)
-                .append(Component.newline())
-                .append(indicatorRow);
+        // Dark gray reads better on the translucent plate; the old default (#9691AB) is mapped to it
+        // so existing configs pick the change up without an edit.
+        TextColor legacyGray = TextColor.fromHexString("#9691AB");
+        if (legacyGray.equals(indicatorRow.color())) {
+            indicatorRow = indicatorRow.color(NamedTextColor.DARK_GRAY);
+        }
+        TextColor indicatorColor = indicatorRow.color() != null ? indicatorRow.color() : NamedTextColor.DARK_GRAY;
+        switch (row) {
+            case ROW_ACTIVITY:
+                return Component.text(BotActivity.currentLabel(fp))
+                        .color(indicatorColor)
+                        .decoration(TextDecoration.ITALIC, true);
+            case ROW_NAME: {
+                String rawName = fp.getRawDisplayName() != null ? fp.getRawDisplayName() : fp.getDisplayName();
+                Component nameRow =
+                        TextUtil.colorize(rawName != null && !rawName.isBlank() ? rawName : fp.getName());
+                if (nameRow.color() == null) nameRow = nameRow.color(TextColor.fromHexString("#A78BFA"));
+                return nameRow;
+            }
+            default:
+                return indicatorRow;
+        }
     }
 
     public static void removeOrphanedNametags(String reason) {

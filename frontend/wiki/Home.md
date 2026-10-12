@@ -4,8 +4,9 @@
 
 Welcome to the FakePlayerPlugin (FPP) wiki. FPP spawns server-side bot entities that behave like
 players - useful for **AFK farms, automated tasks, testing, and NPC simulations**. It is **not** a
-fake-online-count or player-spoofing tool: bots are hidden from the tab list and server-list ping,
-always wear a mandatory "ʙᴏᴛ ʙʏ {owner}" nametag, and can never take a real account's identity.
+fake-online-count or player-spoofing tool: bots are hidden from the tab list by default (listed only
+as `[Bot] - name` if an admin enables it), are never counted as players, always wear a mandatory
+"ʙᴏᴛ ʙʏ {owner}" nametag, and can never take a real account's identity.
 
 ---
 
@@ -41,12 +42,23 @@ always wear a mandatory "ʙᴏᴛ ʙʏ {owner}" nametag, and can never take a re
 
 - **Source:** https://github.com/Pepe-tf/Fake-Player-plugin-2.0
 - **Discord:** https://discord.gg/Q9cd9frzRt
-- **Modrinth:** https://modrinth.com/plugin/fake-player-plugin-(fpp)
+- **Modrinth:** https://modrinth.com/plugin/fake-player-plugin-fpp
 - **License:** MIT
 
 ---
 
-## Latest Version: v2.0.6.1
+## Latest Version: v2.1.0 (Part 1)
+
+**Highlights:**
+- 🛡️ **Network Protocol Error fix** - a per-viewer packet guard keeps scoreboard teams consistent
+- 🏷️ **Honest bots** - tab list off by default (`[Bot] - name` when on), no fake ping, real-player-only counts
+- 🪪 **Three-row name tag** with vanilla-style plates
+- 🚤 **Auto mount** - boats/minecarts pick bots up; bots re-spawn in their vehicle like a returning player
+- ⬆️ **Auto update** from Modrinth on restart (SHA-512 verified)
+
+---
+
+## Previous Version: v2.0.6.1
 
 **Highlights:**
 - 📍 **`/fpp spawn --location`** - admins can spawn a bot at any `<x> <y> <z> <world>` instead of only
@@ -94,8 +106,10 @@ always wear a mandatory "ʙᴏᴛ ʙʏ {owner}" nametag, and can never take a re
 - 🖥️ **GUI Suite** - bot list hub (search, sort, live refresh, spawn & settings shortcuts),
   per-bot settings (general, PVE, pathfinding, skin, auto-eat, rename, danger zone), global settings
   with runtime debug toggles, and a categorized help GUI
-- 🫥 **Invisible to Players** - no tab-list entry, no server-list ping count/sample entry, no
-  advancements, no join/leave/death chat noise
+- 🫥 **Invisible to Players** - no tab-list entry by default (`[Bot] - name` when enabled), no
+  server-list ping count/sample entry, no advancements, no join/leave/death chat noise
+- 🚤 **Auto Mount** - boats and minecarts pick bots up like villagers; a bot that logs out in a
+  vehicle returns to it, like a player
 - ✅ **Folia Support** - region-thread-safe ticking, nametag rendering, and Head-AI on Folia's
   regionised architecture
 - 🔐 **LuckPerms-Faithful Permissions** - no hard-coded operator bypasses anywhere; every `fpp.*`

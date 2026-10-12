@@ -12,7 +12,7 @@ FPP spawns server-side bot entities that behave like players - useful for **AFK 
 
 ## Installation
 
-1. Download `fpp.jar` from [Modrinth](https://modrinth.com/plugin/fake-player-plugin-(fpp)) or build from source.
+1. Download `fpp.jar` from [Modrinth](https://modrinth.com/plugin/fake-player-plugin-fpp) or build from source.
 2. Drop the JAR into your server's `plugins/` folder.
 3. Restart the server.
 4. The plugin creates `plugins/FakePlayerPlugin/` with:

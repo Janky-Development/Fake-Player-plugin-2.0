@@ -1037,13 +1037,9 @@ public final class BotPersistence {
             fp.setLeftClickIntervalTicks(sb.leftClickIntervalTicks);
             fp.setRightClickIntervalTicks(sb.rightClickIntervalTicks);
             for (UUID shared : sb.sharedControllers) fp.addSharedController(shared);
-            if (sb.pingUserSet && sb.ping >= 0) {
-                fp.setUserPing(sb.ping);
-                fp.setBasePing(-1);
-            } else {
-                fp.setUserPing(-1);
-                fp.setBasePing(-1);
-            }
+            // Custom/fabricated ping is never restored; bots always report no latency.
+            fp.setUserPing(-1);
+            fp.setBasePing(-1);
             fp.setPveSmartAttackMode(sb.pveSmartAttackMode);
             fp.setPveRange(sb.pveRange);
             if (sb.pvePriority != null) fp.setPvePriority(sb.pvePriority);
@@ -1058,19 +1054,6 @@ public final class BotPersistence {
 
             manager.persistBotSettings(fp);
 
-            if (sb.pingUserSet && sb.ping >= 0) {
-                final UUID restoredUuid = fp.getUuid();
-                final int restoredPing = sb.ping;
-                FppScheduler.runSyncLater(
-                        plugin,
-                        () -> {
-                            FakePlayer restored = manager.getByUuid(restoredUuid);
-                            if (restored != null) {
-                                manager.applyPing(restored, restoredPing);
-                            }
-                        },
-                        5L);
-            }
         }
 
         if (loadedTasks != null) {
@@ -1427,9 +1410,19 @@ public final class BotPersistence {
                 String val = entity.getPersistentDataContainer().get(key, PersistentDataType.STRING);
 
                 if (val != null) {
-                    entity.remove();
-                    removed++;
-                    Config.debug("Purged orphaned entity: " + val);
+                    try {
+                        if (entity instanceof Player orphanBot) {
+                            // A bot body from a previous plugin instance (e.g. hot-reload whose
+                            // disable was interrupted). Players can't be remove()d - disconnect it.
+                            NmsPlayerSpawner.removeFakePlayerFast(orphanBot, "orphaned_after_reload");
+                        } else {
+                            entity.remove();
+                        }
+                        removed++;
+                        Config.debug("Purged orphaned entity: " + val);
+                    } catch (Throwable t) {
+                        FppLogger.debug("Could not purge orphaned entity '" + val + "': " + t);
+                    }
                 }
             }
         }

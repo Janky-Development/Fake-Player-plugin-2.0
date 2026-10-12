@@ -169,6 +169,9 @@ public final class FakePlayerPlugin extends JavaPlugin {
         instance = this;
         enabledAt = System.currentTimeMillis();
         FppLogger.init(getLogger());
+        // Hot-reload safety (PlugManX etc. swap the jar before disabling us): define every class now
+        // so onDisable never needs to read from a jar that has since been replaced.
+        me.bill.fakePlayerPlugin.util.ClassPreloader.preload(getFile(), getClassLoader());
         me.bill.fakePlayerPlugin.util.BotLoginLogFilter.install(this);
 
         // ── Folia Detection ─────────────────────────────────────────────────────
@@ -381,6 +384,9 @@ public final class FakePlayerPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(inventoryCommand, this);
         getServer().getPluginManager().registerEvents(new BotLoginOverrideListener(this, fakePlayerManager), this);
         getServer().getPluginManager().registerEvents(new BotXpPickupListener(this, fakePlayerManager), this);
+        getServer()
+                .getPluginManager()
+                .registerEvents(new me.bill.fakePlayerPlugin.fakeplayer.BotAutoMount(fakePlayerManager), this);
 
         helpGui = new HelpGui(this, commandManager);
         getServer().getPluginManager().registerEvents(helpGui, this);
@@ -481,6 +487,10 @@ public final class FakePlayerPlugin extends JavaPlugin {
 
         botPersistence.purgeOrphanedBodiesAndRestore(fakePlayerManager);
 
+        // Viewers that were online before this (re)load never went through the join hook.
+        fakePlayerManager.enforceTabPolicy();
+        FppScheduler.runSyncLater(this, () -> fakePlayerManager.enforceTabPolicy(), 40L);
+
         if (velocityChannel != null) {
             FppScheduler.runSyncLater(this, () -> velocityChannel.broadcastResyncRequest(), 10L);
         }
@@ -491,53 +501,85 @@ public final class FakePlayerPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         Config.debugStartup("onDisable called.");
-        me.bill.fakePlayerPlugin.util.BotLoginLogFilter.uninstall();
+        shutdownStep("log filter", me.bill.fakePlayerPlugin.util.BotLoginLogFilter::uninstall);
 
         int botsRemoved = fakePlayerManager != null ? fakePlayerManager.getCount() : 0;
 
-        if (pveController != null) pveController.shutdown();
-        if (autoEatController != null) autoEatController.shutdown();
-        if (rentalService != null) rentalService.shutdown();
+        shutdownStep("pve", () -> {
+            if (pveController != null) pveController.shutdown();
+        });
+        shutdownStep("auto-eat", () -> {
+            if (autoEatController != null) autoEatController.shutdown();
+        });
+        shutdownStep("rental", () -> {
+            if (rentalService != null) rentalService.shutdown();
+        });
+        shutdownStep("pathfinding", () -> {
+            if (pathfindingService != null) pathfindingService.cancelAll();
+        });
+        shutdownStep("chunk loader", () -> {
+            if (chunkLoader != null) chunkLoader.releaseAll();
+        });
 
-        if (pathfindingService != null) pathfindingService.cancelAll();
-
-        if (chunkLoader != null) chunkLoader.releaseAll();
-
-        if (botPersistence != null && fakePlayerManager != null) {
-            if (Config.persistOnRestart()) {
+        shutdownStep("persistence", () -> {
+            if (botPersistence != null && fakePlayerManager != null && Config.persistOnRestart()) {
                 Config.debugStartup("Saving " + fakePlayerManager.getCount() + " bot(s) for persistence...");
                 botPersistence.saveForShutdown(fakePlayerManager.getActivePlayers());
             }
-        }
+        });
 
-        if (velocityChannel != null) {
-            velocityChannel.broadcastServerOffline();
-        }
+        shutdownStep("network offline", () -> {
+            if (velocityChannel != null) velocityChannel.broadcastServerOffline();
+        });
 
-        if (fakePlayerManager != null) fakePlayerManager.removeAllSyncFast();
+        // Always runs, even if saving failed above - otherwise the bots would be left online as
+        // ghost players that outlive this plugin instance (the cause of orphans after a reload).
+        shutdownStep("remove bots", () -> {
+            if (fakePlayerManager != null) fakePlayerManager.removeAllSyncFast();
+        });
 
-        boolean dbFlushed = false;
-        if (databaseManager != null) {
-            databaseManager.recordAllShutdown();
-            databaseManager.close();
-            dbFlushed = true;
-        }
+        shutdownStep("database", () -> {
+            if (databaseManager != null) {
+                databaseManager.recordAllShutdown();
+                databaseManager.close();
+            }
+        });
 
-        if (heartbeatSender != null) heartbeatSender.stop();
-        if (networkHeartbeat != null) networkHeartbeat.stop();
+        shutdownStep("heartbeat", () -> {
+            if (heartbeatSender != null) heartbeatSender.stop();
+            if (networkHeartbeat != null) networkHeartbeat.stop();
+        });
+        shutdownStep("metrics/perf", () -> {
+            if (fppMetrics != null) fppMetrics.shutdown();
+            if (performanceMonitor != null) performanceMonitor.stop();
+            if (profiler != null) profiler.stop();
+        });
 
-        if (fppMetrics != null) fppMetrics.shutdown();
-        if (performanceMonitor != null) performanceMonitor.stop();
-        if (profiler != null) profiler.stop();
-
-        getServer().getMessenger().unregisterIncomingPluginChannel(this, VelocityChannel.CHANNEL);
-        getServer().getMessenger().unregisterIncomingPluginChannel(this, VelocityChannel.PROXY_CHANNEL);
-        getServer().getMessenger().unregisterOutgoingPluginChannel(this, VelocityChannel.CHANNEL);
-        getServer().getMessenger().unregisterOutgoingPluginChannel(this, VelocityChannel.PROXY_CHANNEL);
-        getServer().getMessenger().unregisterOutgoingPluginChannel(this, "BungeeCord");
+        shutdownStep("plugin channels", () -> {
+            getServer().getMessenger().unregisterIncomingPluginChannel(this, VelocityChannel.CHANNEL);
+            getServer().getMessenger().unregisterIncomingPluginChannel(this, VelocityChannel.PROXY_CHANNEL);
+            getServer().getMessenger().unregisterOutgoingPluginChannel(this, VelocityChannel.CHANNEL);
+            getServer().getMessenger().unregisterOutgoingPluginChannel(this, VelocityChannel.PROXY_CHANNEL);
+            getServer().getMessenger().unregisterOutgoingPluginChannel(this, "BungeeCord");
+        });
 
         long uptimeMs = System.currentTimeMillis() - enabledAt;
-        FppLogger.printShutdownBanner(botsRemoved, uptimeMs);
+        final int removed = botsRemoved;
+        shutdownStep("banner", () -> FppLogger.printShutdownBanner(removed, uptimeMs));
+    }
+
+    /** Runs one shutdown stage; a failure is logged and never prevents the stages after it. */
+    private void shutdownStep(String stage, Runnable step) {
+        try {
+            step.run();
+        } catch (Throwable t) {
+            getLogger().warning("Shutdown step '" + stage + "' failed: " + t);
+        }
+    }
+
+    /** The jar this plugin was loaded from (used to stage a same-named file in the update folder). */
+    public File getPluginJar() {
+        return getFile();
     }
 
     @SuppressWarnings("unused")

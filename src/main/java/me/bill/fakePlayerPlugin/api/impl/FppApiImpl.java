@@ -366,10 +366,10 @@ public final class FppApiImpl implements FppApi {
 
     @Override
     public void setBotPing(@NotNull FppBot bot, int pingMs) {
+        // Fabricated latency is no longer supported; bots always report no ping.
         FakePlayer fp = manager.getByUuid(bot.getUuid());
         if (fp == null) return;
-        manager.applyPing(fp, Math.max(0, Math.min(9999, pingMs)));
-        manager.persistBotSettings(fp);
+        manager.applyPing(fp, -1);
     }
 
     @Override

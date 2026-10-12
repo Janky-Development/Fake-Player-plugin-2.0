@@ -3,7 +3,7 @@
   "name": "FakePlayerPlugin",
   "version": "2.0.5",
   "description": "Advanced fake player / bot plugin for Paper and Folia 1.21+ with realistic in-world bot bodies, pathfinding, PVE, chunk loading, and proxy network support.",
-  "url": "https://modrinth.com/plugin/fake-player-plugin-(fpp)",
+  "url": "https://modrinth.com/plugin/fake-player-plugin-fpp",
   "authors": [
     "F_PP"
   ],

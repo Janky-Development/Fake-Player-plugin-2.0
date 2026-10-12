@@ -29,9 +29,28 @@ globally via `/fpp settings` → 🐛 ᴅᴇʙᴜɢ → ꜱʜᴏᴡ ᴀʟʟ ᴘ�
 ## Bots & Spawning
 
 ### Q: Why don't bots show in the tab list or server-list player count?
-**A:** By design. Bots are unlisted in the tab, subtracted from the server-list ping count, and
-removed from its hover sample. They also earn no advancements and send no join/leave/death chat
-messages.
+**A:** By design. Bots are unlisted in the tab by default, subtracted from the server-list ping
+count, and removed from its hover sample. They also earn no advancements and send no
+join/leave/death chat messages. An admin can enable `tab-list.enabled` (or the Body toggle in
+`/fpp settings`); bots are then listed only as `[Bot] - <botname>`. They are never counted as
+players in `%fpp_online%` / `%fpp_total%` either way.
+
+### Q: A boat or minecart ran into my bot and it got on - can I stop that?
+**A:** That's `body.auto-mount` (on by default): vehicles pick bots up the way they pick up
+villagers. Turn it off in the config or `/fpp settings` → Body. A bot only leaves a seat when
+deliberately dismounted (`/fpp sneak`) and a real player boarding a boat always takes the first
+(controlling) seat.
+
+### Q: A bot was in a boat when it despawned - where did the boat go?
+**A:** Same as a real player logging out: if the bot was the only player aboard, the vehicle goes
+with it and is re-created, with the bot seated, the next time that bot spawns. If another player
+was aboard, the vehicle stays and the bot boards it again when it comes back. Saved in
+`data/bot-mounts.yml`.
+
+### Q: Players get kicked with "Network Protocol Error ... Cannot remove from team".
+**A:** Fixed in v2.1.0. Bots' vanilla names are hidden with a hand-pushed scoreboard team that
+could desync from another plugin's team (TAB, LuckPerms prefixes, AFK displays). A per-viewer packet
+guard now keeps every client's team state consistent.
 
 ### Q: Bots appear but have no skin.
 **A:** Skins come from the rarity pools in `plugins/FakePlayerPlugin/skins/` (`main_skin.txt` +

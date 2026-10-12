@@ -12,6 +12,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import me.bill.fakePlayerPlugin.FakePlayerPlugin;
+import me.bill.fakePlayerPlugin.fakeplayer.FakePlayer;
 import me.bill.fakePlayerPlugin.util.FppLogger;
 
 public final class Config {
@@ -266,6 +267,14 @@ public final class Config {
         }
     }
 
+    /**
+     * Download new releases from Modrinth into {@code plugins/update} so they install on the next
+     * restart. On by default; set {@code update-checker.auto-update: false} to only be notified.
+     */
+    public static boolean updateCheckerAutoUpdate() {
+        return cfg.getBoolean("update-checker.auto-update", true);
+    }
+
     public static boolean updateCheckerEnabled() {
         return cfg.getBoolean("update-checker.enabled", true);
     }
@@ -295,11 +304,12 @@ public final class Config {
     }
 
     /**
-     * Bots are permanently hidden from the tab list - there is no override mechanism. This is
-     * intentional: bots must never be able to present themselves as a real connected client.
+     * Admin toggle ({@code tab-list.enabled}, default off). When on, bots appear in the tab list,
+     * but only ever as {@code [Bot] - <botname>} (see {@link FakePlayer#tabListName}), never under a
+     * bare name that could pass for a real player.
      */
     public static boolean tabListEnabled() {
-        return false;
+        return cfg.getBoolean("tab-list.enabled", false);
     }
 
     public static int maxBots() {
@@ -378,11 +388,34 @@ public final class Config {
     }
 
     public static String nametagSecondLineFormat() {
-        return string("nametag.second-line.format", "<gray>bot by {owner}</gray>");
+        String fmt = string("nametag.second-line.format", "<#BAFF4F>bot by {owner}</#BAFF4F>");
+        // Older configs persisted previous gray defaults (hard to read against the sky); those
+        // untouched defaults are upgraded to the current lime color. Custom formats are kept.
+        String compact = fmt.replace(" ", "").toLowerCase(java.util.Locale.ROOT);
+        if (compact.equals("<#9691ab>ʙᴏᴛʙʏ{owner}</#9691ab>")
+                || compact.equals("<gray>botby{owner}</gray>")
+                || compact.equals("<gray>ʙᴏᴛʙʏ{owner}</gray>")
+                || compact.equals("<#9691ab>botby{owner}</#9691ab>")
+                || compact.equals("<dark_gray>botby{owner}</dark_gray>")
+                || compact.equals("<dark_gray>ʙᴏᴛʙʏ{owner}</dark_gray>")) {
+            return "<#BAFF4F>ʙᴏᴛ ʙʏ {owner}</#BAFF4F>";
+        }
+        return fmt;
     }
 
     public static double nametagSecondLineYOffset() {
         return cfg.getDouble("nametag.second-line.y-offset", 1.9);
+    }
+
+    /** Background plate alpha (0-255) behind the tag text; vanilla name tags use 25% black = 64. */
+    public static int nametagBackgroundAlpha() {
+        double opacity = cfg.getDouble("nametag.second-line.background-opacity", 0.25);
+        return (int) Math.round(Math.max(0.0, Math.min(1.0, opacity)) * 255.0);
+    }
+
+    /** Vertical gap between the stacked tag rows (blocks); 0.3 leaves a thin gap between plates. */
+    public static double nametagRowSpacing() {
+        return Math.max(0.2, cfg.getDouble("nametag.second-line.row-spacing", 0.3));
     }
 
     public static int nametagInterpolationTicks() {
@@ -407,6 +440,14 @@ public final class Config {
 
     public static boolean bodyPickUpItems() {
         return cfg.getBoolean("body.pick-up-items", false);
+    }
+
+    /**
+     * Boats and moving rideable minecarts that run into a bot pick it up, exactly as vanilla vehicles
+     * pick up villagers and other mobs. Admin toggle, on by default.
+     */
+    public static boolean autoMountEnabled() {
+        return cfg.getBoolean("body.auto-mount", true);
     }
 
     public static boolean bodyPickUpXp() {

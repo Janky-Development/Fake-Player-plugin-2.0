@@ -99,7 +99,7 @@ reintroduced - pull requests restoring them will be declined. See
 ## Links
 
 - **Discord:** https://discord.gg/Q9cd9frzRt
-- **Modrinth:** https://modrinth.com/plugin/fake-player-plugin-(fpp)
+- **Modrinth:** https://modrinth.com/plugin/fake-player-plugin-fpp
 - **Wiki:** [frontend/wiki/Home.md](frontend/wiki/Home.md)
 
 ## License

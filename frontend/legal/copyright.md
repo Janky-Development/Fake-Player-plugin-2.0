@@ -258,7 +258,7 @@ For copyright concerns or infringement notices, contact:
 |---|---|
 | Discord | https://discord.gg/Q9cd9frzRt |
 | GitHub Issues | https://github.com/Pepe-tf/Fake-Player-plugin-2.0/issues |
-| Modrinth | https://modrinth.com/plugin/fake-player-plugin-(fpp) |
+| Modrinth | https://modrinth.com/plugin/fake-player-plugin-fpp |
 
 ---
 
@@ -266,7 +266,7 @@ For copyright concerns or infringement notices, contact:
 
 - GitHub: https://github.com/Pepe-tf/Fake-Player-plugin-2.0
 - Discord: https://discord.gg/Q9cd9frzRt
-- Modrinth: https://modrinth.com/plugin/fake-player-plugin-(fpp)
+- Modrinth: https://modrinth.com/plugin/fake-player-plugin-fpp
 
 ---
 

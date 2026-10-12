@@ -34,6 +34,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
+import me.bill.fakePlayerPlugin.fakeplayer.network.ViewerPacketGuard;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.scores.PlayerTeam;
 
@@ -312,8 +313,7 @@ public final class PacketHelper {
             Object nms = getHandle(receiver);
             if (nms == null) return;
 
-            String dispStr = fp.getDisplayName();
-            if (dispStr == null || dispStr.isBlank()) dispStr = fp.getName();
+            String dispStr = fp.getTabListName();
             Object displayName = fp.getCachedNmsDisplayComponent();
             if (displayName == null || !dispStr.equals(fp.getCachedNmsDisplaySource())) {
                 Component adv = MiniMessage.miniMessage().deserialize(dispStr);
@@ -631,7 +631,7 @@ public final class PacketHelper {
                 fp.setCachedTabListGameProfile(profile);
             }
 
-            String dispStr = fp.getNameTagNick() != null ? fp.getNameTagNick() : fp.getDisplayName();
+            String dispStr = fp.getTabListName();
 
             Object displayName = fp.getCachedNmsDisplayComponent();
             if (displayName == null || !dispStr.equals(fp.getCachedNmsDisplaySource())) {
@@ -696,9 +696,9 @@ public final class PacketHelper {
 
             Object displayName = fp.getCachedNmsDisplayComponent();
             if (displayName == null) {
-                Component adv = MiniMessage.miniMessage().deserialize(fp.getDisplayName());
+                Component adv = MiniMessage.miniMessage().deserialize(fp.getTabListName());
                 displayName = adventureToNms(adv);
-                fp.setCachedNmsDisplay(displayName, fp.getDisplayName());
+                fp.setCachedNmsDisplay(displayName, fp.getTabListName());
             }
 
             int latency = fp.getEffectivePing();
@@ -730,9 +730,9 @@ public final class PacketHelper {
 
             Object displayName = fp.getCachedNmsDisplayComponent();
             if (displayName == null) {
-                Component adv = MiniMessage.miniMessage().deserialize(fp.getDisplayName());
+                Component adv = MiniMessage.miniMessage().deserialize(fp.getTabListName());
                 displayName = adventureToNms(adv);
-                fp.setCachedNmsDisplay(displayName, fp.getDisplayName());
+                fp.setCachedNmsDisplay(displayName, fp.getTabListName());
             }
 
             int latency = fp.getEffectivePing();
@@ -760,8 +760,7 @@ public final class PacketHelper {
             Object profile = buildProfileWithSkin(fp);
             if (profile == null) return;
 
-            String dispStr = fp.getDisplayName();
-            if (dispStr == null || dispStr.isBlank()) dispStr = fp.getName();
+            String dispStr = fp.getTabListName();
             Object displayName = fp.getCachedNmsDisplayComponent();
             if (displayName == null || !dispStr.equals(fp.getCachedNmsDisplaySource())) {
                 Component adv = MiniMessage.miniMessage().deserialize(dispStr);
@@ -1207,6 +1206,7 @@ public final class PacketHelper {
         try {
             ServerPlayer nms = getServerPlayer(receiver);
             if (nms == null) return;
+            installTeamGuard(nms);
             sendDirect(nms, ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true));
         } catch (Throwable t) {
             FppLogger.debug("sendTeamCreate failed for " + receiver.getName() + ": " + t);
@@ -1222,11 +1222,79 @@ public final class PacketHelper {
         try {
             ServerPlayer nms = getServerPlayer(receiver);
             if (nms == null) return;
+            installTeamGuard(nms);
             ClientboundSetPlayerTeamPacket.Action action =
                     add ? ClientboundSetPlayerTeamPacket.Action.ADD : ClientboundSetPlayerTeamPacket.Action.REMOVE;
             sendDirect(nms, ClientboundSetPlayerTeamPacket.createPlayerPacket(team, entryName, action));
         } catch (Throwable t) {
             FppLogger.debug("sendTeamMembership failed for " + receiver.getName() + ": " + t);
+        }
+    }
+
+    /**
+     * Makes sure the viewer's connection has a {@link ViewerPacketGuard}, so hand-pushed team packets
+     * can never desync the client's scoreboard from what other plugins/the server send it (which
+     * otherwise kicks the client with "Network Protocol Error"). Must run before the first team
+     * packet FPP sends to that viewer.
+     */
+    /**
+     * Tells {@code viewer} to stop listing {@code uuid} in the tab list, via the vanilla "update
+     * listed" packet (the player-info entry itself is kept, so the bot's skin still renders).
+     */
+    public static void sendUnlisted(Player viewer, UUID uuid) {
+        if (viewer == null || uuid == null) return;
+        try {
+            ServerPlayer nms = getServerPlayer(viewer);
+            if (nms == null) return;
+            installTeamGuard(nms);
+            sendDirect(nms, net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.updateListed(uuid, false));
+        } catch (Throwable t) {
+            FppLogger.debug("sendUnlisted failed for " + viewer.getName() + ": " + t);
+        }
+    }
+
+    /**
+     * Sets {@code uuid}'s tab-list state for one viewer directly: listed flag plus, when listing,
+     * the {@code displayName} shown. Uses the vanilla packet types straight (no reflection), so it
+     * works regardless of the tab-list reflection helpers' state.
+     */
+    public static void sendTabEntry(Player viewer, UUID uuid, boolean listed, String displayName) {
+        if (viewer == null || uuid == null) return;
+        try {
+            ServerPlayer nms = getServerPlayer(viewer);
+            if (nms == null) return;
+            installTeamGuard(nms);
+            var entry = new net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.Entry(
+                    uuid,
+                    null,
+                    listed,
+                    0,
+                    net.minecraft.world.level.GameType.SURVIVAL,
+                    listed && displayName != null ? net.minecraft.network.chat.Component.literal(displayName) : null,
+                    false,
+                    0,
+                    null);
+            var actions = java.util.EnumSet.of(
+                    net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LISTED,
+                    net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME);
+            sendDirect(nms, new net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket(actions, entry));
+        } catch (Throwable t) {
+            FppLogger.debug("sendTabEntry failed for " + viewer.getName() + ": " + t);
+        }
+    }
+
+    /** Installs the viewer packet guard on {@code viewer}'s connection (idempotent). */
+    public static void installViewerGuard(Player viewer) {
+        ServerPlayer nms = getServerPlayer(viewer);
+        if (nms != null) installTeamGuard(nms);
+    }
+
+    private static void installTeamGuard(ServerPlayer nms) {
+        try {
+            if (nms.connection == null || nms.connection.connection == null) return;
+            ViewerPacketGuard.install(nms.connection.connection.channel);
+        } catch (Throwable t) {
+            FppLogger.debug("installTeamGuard failed: " + t);
         }
     }
 

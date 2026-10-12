@@ -1,11 +1,11 @@
 name: FakePlayerPlugin
-version: '2.0.6.1'
+version: '2.1.0'
 main: me.bill.fakePlayerPlugin.FakePlayerPlugin
 api-version: '1.21'
 folia-supported: true
 authors: [ F_PP ]
 description: "Advanced fake player / bot plugin for Paper and Folia 1.21+"
-website: "https://modrinth.com/plugin/fake-player-plugin-(fpp)"
+website: "https://modrinth.com/plugin/fake-player-plugin-fpp"
 softdepend: [ PlaceholderAPI, WorldEdit, spark, Vault, ExcellentEconomy ]
 
 commands:

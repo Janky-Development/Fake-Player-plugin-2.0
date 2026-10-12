@@ -1,5 +1,20 @@
 # Changelog
 
+## v2.1.0 - Part 1 (Beta)
+
+### Fixed
+- **Network Protocol Error kick** (`Cannot remove from team ...`): a per-viewer packet guard keeps scoreboard teams consistent, so TAB/LuckPerms/AFK-display teams can no longer desync a client.
+- **Hot reload** (PlugManX): classes preloaded, shutdown steps isolated, leftover bots purged.
+
+### Changed
+- **Honest bots:** tab list off by default (`tab-list.enabled`; when on, listed only as `[Bot] - name`, enforced for every viewer); no fabricated ping; `%fpp_online%`/`%fpp_total%` count real players only; bots can't take a real account's name.
+- **Name tag:** three separate rows with vanilla-style plates (`nametag.second-line.background-opacity`, `row-spacing`); name `#A78BFA`, indicator `#BAFF4F`. Vanilla name can't reappear, and the tag follows a mounted bot without lag.
+
+### Added
+- **Auto mount** (`body.auto-mount`, default on): boats and moving minecarts pick bots up like villagers; bots stay seated; a real player boarding a boat takes the first seat.
+- **Mount memory:** a bot that despawns in a vehicle returns in it (a shared vehicle is re-boarded), like a player logging back in.
+- **Auto update** (`update-checker.auto-update`, default on): Modrinth release is downloaded to `plugins/update/`, SHA-512 verified, installed on restart.
+
 ## v2.0.6.1 (Beta)
 
 ### Added - Minecraft 26.3 Support

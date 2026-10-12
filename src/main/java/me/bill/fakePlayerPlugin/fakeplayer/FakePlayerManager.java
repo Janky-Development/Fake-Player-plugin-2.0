@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
@@ -195,6 +196,16 @@ public class FakePlayerManager {
     }
 
     public FakePlayerManager(FakePlayerPlugin plugin) {
+        // Tab-list policy for every viewer connection: bots are never listed under a bare name.
+        me.bill.fakePlayerPlugin.fakeplayer.network.ViewerPacketGuard.configureTab(
+                (uuid, name) -> {
+                    FakePlayer fp = uuid != null ? activePlayers.get(uuid) : null;
+                    if (fp == null && name != null) fp = getByName(name);
+                    return fp != null ? fp.getName() : null;
+                },
+                Config::tabListEnabled,
+                FakePlayer::tabListName);
+
         this.plugin = plugin;
         FAKE_PLAYER_KEY = new NamespacedKey(plugin, "fake_player_name");
 
@@ -283,8 +294,7 @@ public class FakePlayerManager {
                                 // non-null reference behind, so check isValid(), not just null, and
                                 // respawn immediately when it's gone. This is what makes the tag
                                 // effectively unremovable instead of merely "usually present".
-                                Entity tag = fp.getNametagEntity();
-                                if (tag == null || !tag.isValid()) {
+                                if (!FakePlayerBody.nametagIntact(fp)) {
                                     if (!Config.nametagSecondLineEnabled()) return;
                                     Player body = fp.getPlayer();
                                     if (body == null || !body.isOnline()) return;
@@ -594,6 +604,10 @@ public class FakePlayerManager {
                                         || Math.abs(tl.getY() - expectedY) > 0.02;
                                 if (off) FakePlayerBody.moveNametag(fp, after);
                             }
+
+                            // Vehicles pick up mobs that they run into; players are excluded by
+                            // vanilla, so bots get the same rule applied from their side.
+                            BotAutoMount.tick(FakePlayerManager.this, fp, bot);
                         };
                         if (foliaServer) {
                             FppScheduler.runAtEntity(plugin, bot, botTick);
@@ -984,6 +998,9 @@ public class FakePlayerManager {
                 Player realPlayerByUuid = Bukkit.getPlayer(explicitUuid);
                 if (realPlayerByUuid != null && !activePlayers.containsKey(explicitUuid)) return -4;
             }
+            // A bot may not take the name of a real account that has joined this server before, so
+            // it can never be mistaken for (or impersonate) an actual player.
+            if (isRealPlayerName(effectiveName)) return -4;
             resolvedCustomUuid = explicitUuid != null ? explicitUuid : resolveUuid(effectiveName);
             if (activePlayers.containsKey(resolvedCustomUuid)) return 0;
 
@@ -1238,10 +1255,13 @@ public class FakePlayerManager {
                     int initialPing = computeInitialPing(fp);
 
                     if (!fp.isBodyless()) {
-                        Player body = FakePlayerBody.spawn(fp, spawnLoc, initialPing);
+                        // A bot that logged out in a vehicle comes back where that vehicle was.
+                        Location mountLoc = BotMountMemory.pendingLocation(fp.getUuid());
+                        final Location bodyLoc = mountLoc != null ? mountLoc : spawnLoc;
+                        Player body = FakePlayerBody.spawn(fp, bodyLoc, initialPing);
                         if (body != null) {
                             stampFakePlayerMarker(body, fp);
-                            protectRequestedSpawnLocation(fp, body, spawnLoc.clone());
+                            restoreMountOrProtectSpawn(fp, body, bodyLoc);
                             fp.setPacketProfileName(fp.getName());
                             // Ping was already set on the NMS ServerPlayer before placeNewPlayer,
                             // but update it again here in case the pre-spawn set didn't take effect.
@@ -1411,6 +1431,66 @@ public class FakePlayerManager {
                         }
                     }
                 });
+    }
+
+    /**
+     * Like a player rejoining in their boat: if this bot logged out riding a vehicle, the vehicle is
+     * re-created where it was and the bot seated in it. Otherwise (and if that fails) the usual
+     * spawn-point protection applies. The protection is skipped while a mount is pending because it
+     * would teleport the bot - and thereby dismount it - back to the point it was asked to spawn at.
+     */
+    private void restoreMountOrProtectSpawn(FakePlayer fp, Player body, Location spawnLoc) {
+        final UUID logical = fp.getUuid();
+        if (BotMountMemory.pendingLocation(logical, body.getUniqueId()) == null) {
+            protectRequestedSpawnLocation(fp, body, spawnLoc.clone());
+            return;
+        }
+        final Location requested = spawnLoc.clone();
+        FppScheduler.runAtEntityLaterWithId(
+                plugin,
+                body,
+                () -> {
+                    Player current = resolveCurrentBody(fp, body);
+                    if (current == null || !current.isValid()) return;
+                    BotMountMemory.restore(current, logical).thenAccept(ok -> {
+                        if (Boolean.TRUE.equals(ok)) return;
+                        // No vehicle to sit in: do not leave the bot buried in the block the
+                        // vehicle used to occupy - lift it to free space, then protect the spawn.
+                        FppScheduler.runAtEntityLaterWithId(
+                                plugin,
+                                current,
+                                () -> {
+                                    liftOutOfBlocks(current);
+                                    protectRequestedSpawnLocation(fp, current, requested);
+                                },
+                                1L);
+                    });
+                },
+                2L);
+    }
+
+    /** Moves {@code bot} straight up to the first position where its feet and head are free. */
+    private static void liftOutOfBlocks(Player bot) {
+        try {
+            Location loc = bot.getLocation();
+            World w = loc.getWorld();
+            if (w == null) return;
+            int maxY = w.getMaxHeight() - 2;
+            Location test = loc.clone();
+            int steps = 0;
+            while (test.getBlockY() < maxY
+                    && steps < 64
+                    && (!test.getBlock().isPassable()
+                            || !test.clone().add(0, 1, 0).getBlock().isPassable())) {
+                test.add(0, 1, 0);
+                steps++;
+            }
+            if (steps > 0) {
+                test.setY(test.getBlockY());
+                FppScheduler.teleportAsync(bot, test);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
     private void protectRequestedSpawnLocation(FakePlayer fp, Player body, Location requested) {
@@ -2379,6 +2459,7 @@ public class FakePlayerManager {
         // Central cleanup: remove the tag on every despawn/death path (some remove the body
         // directly via NmsPlayerSpawner, bypassing FakePlayerBody.removeAll).
         FakePlayerBody.removeNametag(fp);
+        BotAutoMount.forget(fp.getUuid());
 
         Player body = fp.getPhysicsEntity();
         if (body != null) {
@@ -2435,19 +2516,77 @@ public class FakePlayerManager {
         }
     }
 
+    /**
+     * Guards every real viewer's connection and, when the tab list is off, explicitly unlists every
+     * bot for them. Needed beyond the join hook because viewers can already be online when the
+     * plugin (re)loads, and the server's own broadcast of a new bot's entry races our other packets.
+     */
+    public void enforceTabPolicy() {
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (activePlayers.containsKey(viewer.getUniqueId())) continue;
+            PacketHelper.installViewerGuard(viewer);
+            unlistAllFor(viewer);
+        }
+    }
+
+    /** Applies the current tab-list policy for one bot to every real viewer (any UUID it uses). */
+    public void unlistBotEverywhere(FakePlayer fp) {
+        if (fp == null) return;
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (activePlayers.containsKey(viewer.getUniqueId())) continue;
+            applyTabEntry(viewer, fp);
+        }
+    }
+
+    private void unlistAllFor(Player viewer) {
+        for (FakePlayer fp : activePlayers.values()) applyTabEntry(viewer, fp);
+    }
+
+    /**
+     * Sends {@code viewer} this bot's tab state under the current policy: unlisted when the tab list
+     * is off, otherwise listed as {@code [Bot] - <botname>}. Covers both the bot's logical UUID and
+     * its live body UUID, since the client keys entries by whichever the server broadcast.
+     */
+    private void applyTabEntry(Player viewer, FakePlayer fp) {
+        boolean show = Config.tabListEnabled();
+        String name = fp.getTabListName();
+        PacketHelper.sendTabEntry(viewer, fp.getUuid(), show, name);
+        Player body = fp.getPlayer();
+        if (body != null && !body.getUniqueId().equals(fp.getUuid())) {
+            PacketHelper.sendTabEntry(viewer, body.getUniqueId(), show, name);
+        }
+    }
+
     public void syncToPlayer(Player player) {
         FakePlayerBody.syncHiddenNamesTo(player);
+        PacketHelper.installViewerGuard(player);
         if (!Config.tabListEnabled()) {
-
+            unlistAllFor(player);
             for (FakePlayer fp : activePlayers.values()) {
                 PacketHelper.sendTabListUpdateListed(player, fp, false);
             }
             return;
         }
+        unlistAllFor(player);
         for (FakePlayer fp : activePlayers.values()) {
 
             PacketHelper.sendTabListAdd(player, fp);
             PacketHelper.sendTabListLatencyUpdate(player, fp);
+        }
+    }
+
+    /**
+     * Sets the server-side list name (used for every tab packet the server itself generates, e.g.
+     * on a viewer's join) to {@code bot - <botname>}, or clears it when the tab list is off.
+     */
+    public void applyTabListName(FakePlayer fp) {
+        Player body = fp == null ? null : fp.getPlayer();
+        if (body == null) return;
+        try {
+            body.playerListName(
+                    Config.tabListEnabled() ? net.kyori.adventure.text.Component.text(fp.getTabListName()) : null);
+        } catch (Throwable t) {
+            FppLogger.debug("applyTabListName failed for " + fp.getName() + ": " + t);
         }
     }
 
@@ -2457,8 +2596,17 @@ public class FakePlayerManager {
 
         boolean listed = Config.tabListEnabled();
 
+        // The NMS "listed" flag alone only affects packets the server builds later; viewers must be
+        // told directly, otherwise toggling the option on changes nothing for people already online.
+        for (Player p : online) {
+            if (activePlayers.containsKey(p.getUniqueId())) continue;
+            PacketHelper.installViewerGuard(p);
+            unlistAllFor(p);
+        }
+
         for (FakePlayer fp : activePlayers.values()) {
             Player bot = fp.getPlayer();
+            applyTabListName(fp);
             if (bot != null) {
                 boolean nmsOk = NmsPlayerSpawner.setListed(bot, listed);
                 if (!nmsOk) {
@@ -3038,20 +3186,15 @@ public class FakePlayerManager {
     }
 
     /**
-     * Sets an explicit ping value for the given bot, or clears it back to "no ping" (honest, not a
-     * simulated/fake network-realism value) when {@code pingMs} is negative. Automatic fake ping
-     * simulation was removed - bots never fabricate network jitter to seem like a real connection.
+     * Clears any ping on the given bot. Bots never report a latency: neither simulated jitter nor a
+     * user-supplied value is accepted, so a bot cannot present a fabricated network connection.
+     * The {@code pingMs} argument is ignored and kept only for source compatibility.
      */
     public void applyPing(FakePlayer fp, int pingMs) {
         if (fp == null) return;
-        if (pingMs >= 0) {
-            fp.setUserPing(pingMs);
-            fp.setBasePing(-1);
-        } else {
-            fp.setUserPing(-1);
-            fp.setBasePing(-1);
-            fp.setPing(-1);
-        }
+        fp.setUserPing(-1);
+        fp.setBasePing(-1);
+        fp.setPing(-1);
         NmsPlayerSpawner.setPing(fp.getPlayer(), fp.getEffectivePing());
     }
 
@@ -3080,6 +3223,18 @@ public class FakePlayerManager {
     private String pickRandomSkinName() {
         // Skin/name pools removed; simple fallback for stray display-name placeholders.
         return "bot";
+    }
+
+    /** True if {@code name} belongs to a real (non-bot) account this server has seen. */
+    private boolean isRealPlayerName(String name) {
+        try {
+            OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(name);
+            if (cached == null) return false;
+            UUID botUuid = BotIdentityCache.deterministicBotUuid(name);
+            return !cached.getUniqueId().equals(botUuid) && getByUuid(cached.getUniqueId()) == null;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private UUID resolveUuid(String botName) {

@@ -844,6 +844,11 @@ public final class SettingGui implements Listener {
             return;
         }
 
+        if (configKey.equals("tab-list.enabled")) {
+            if (fpm != null) fpm.applyTabListConfig();
+            return;
+        }
+
         if (configKey.equals("body.pushable")
                 || configKey.equals("body.damageable")
                 || configKey.equals("combat.max-health")) {
@@ -1059,6 +1064,11 @@ public final class SettingGui implements Listener {
                 Material.LIME_STAINED_GLASS_PANE,
                 List.of(
                         SettingEntry.toggle(
+                                "tab-list.enabled",
+                                "ᴛᴀʙ ʟɪꜱᴛ",
+                                "ꜱʜᴏᴡ ʙᴏᴛꜱ ɪɴ ᴛʜᴇ ᴛᴀʙ ʟɪꜱᴛ.\nᴀʟᴡᴀʏꜱ ʟɪꜱᴛᴇᴅ ᴀꜱ \"[ʙᴏᴛ] - <ɴᴀᴍᴇ>\".",
+                                Material.NAME_TAG),
+                        SettingEntry.toggle(
                                 "body.pushable",
                                 "ᴘᴜꜱʜᴀʙʟᴇ",
                                 "ᴀʟʟᴏᴡ ᴘʟᴀʏᴇʀꜱ ᴀɴᴅ ᴇɴᴛɪᴛɪᴇꜱ\nᴛᴏ ᴘᴜꜱʜ ʙᴏᴛ ʙᴏᴅɪᴇꜱ.",
@@ -1068,6 +1078,11 @@ public final class SettingGui implements Listener {
                                 "ᴅᴀᴍᴀɢᴇᴀʙʟᴇ",
                                 "ʙᴏᴛꜱ ᴛᴀᴋᴇ ᴘʟᴀʏᴇʀ/ᴇɴᴛɪᴛʏ ᴅᴀᴍᴀɢᴇ.\nꜰᴀʟꜱᴇ = ɪᴍᴍᴜɴᴇ ᴛᴏ ᴘᴠᴘ/ᴍᴏʙꜱ ᴏɴʟʏ.",
                                 Material.IRON_SWORD),
+                        SettingEntry.toggle(
+                                "body.auto-mount",
+                                "ᴀᴜᴛᴏ ᴍᴏᴜɴᴛ",
+                                "ʙᴏᴀᴛꜱ ᴀɴᴅ ᴍᴏᴠɪɴɢ ᴍɪɴᴇᴄᴀʀᴛꜱ ᴘɪᴄᴋ\nʙᴏᴛꜱ ᴜᴘ ᴡʜᴇɴ ᴛʜᴇʏ ʀᴜɴ ɪɴᴛᴏ ᴛʜᴇᴍ,\nʟɪᴋᴇ ᴠɪʟʟᴀɢᴇʀꜱ.",
+                                Material.OAK_BOAT),
                         SettingEntry.toggle(
                                 "body.pick-up-items",
                                 "ᴘɪᴄᴋ ᴜᴘ ɪᴛᴇᴍꜱ",

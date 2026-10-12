@@ -110,12 +110,26 @@ bot-name:
 #   {owner} = the player (or CONSOLE) that spawned the bot.
 #   y-offset             = blocks above the bot's feet (~1.9 sits just above the head, mannequin-style).
 #   interpolation-ticks  = follow smoothing; ~3 matches the bot's own movement.
+#   background-opacity   = black plate behind each row, 0.0-1.0. 0.25 matches a vanilla name tag.
+#   row-spacing          = blocks between the three stacked rows (each row has its own plate).
 # ═══════════════════════════════════════════════════════════════════════════════
 nametag:
   second-line:
-    format: '<#9691AB>ʙᴏᴛ ʙʏ {owner}</#9691AB>'
+    format: '<#BAFF4F>ʙᴏᴛ ʙʏ {owner}</#BAFF4F>'
     y-offset: 1.9
     interpolation-ticks: 3
+    background-opacity: 0.25
+    row-spacing: 0.3
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB LIST
+# ═══════════════════════════════════════════════════════════════════════════════
+# enabled: false (default) keeps bots out of the tab list entirely.
+# When true, bots are listed - always and only as "[Bot] - <botname>" - so they can
+# never pass for a real player. Toggle live in /fpp settings (body category).
+# ═══════════════════════════════════════════════════════════════════════════════
+tab-list:
+  enabled: false
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BOT SKINS (rarity pools)
@@ -186,12 +200,16 @@ messages:
 # pushable controls collision/knockback behavior.
 # damageable false cancels player/entity damage to bot bodies.
 # drop-items-on-despawn false preserves inventory/XP for later respawn/restore.
+# auto-mount true lets boats/minecarts pick bots up when they run into them.
 # ═══════════════════════════════════════════════════════════════════════════════
 body:
   pushable: true
   damageable: true
   pick-up-items: true
   pick-up-xp: true
+  # auto-mount: boats and moving minecarts that run into a bot pick it up, like vanilla mobs
+  # (villagers etc.). Bots dismounted by command/sneak are not re-boarded for 3 seconds.
+  auto-mount: true
   drop-items-on-despawn: false
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -390,6 +408,12 @@ performance:
 # ═══════════════════════════════════════════════════════════════════════════════
 update-checker:
   enabled: true
+  # auto-update: when a newer release exists on Modrinth
+  # (https://modrinth.com/plugin/fake-player-plugin-fpp) it is downloaded into
+  # plugins/update/ under this jar's own file name, checked against Modrinth's
+  # SHA-512, and installed by the server on its next restart. Nothing is replaced
+  # while the server is running. On by default - set to false to only be notified.
+  auto-update: true
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CLICK AUTOMATION
