@@ -63,6 +63,8 @@ public final class GuiKit {
     public static final int PER_PAGE = 45;
     /** Footer slot that takes the "back to main menu" (or close) button. */
     public static final int SLOT_BACK = 53;
+    /** Bottom-left footer slot that holds the creator's credit head in every menu. */
+    public static final int SLOT_CREDIT = 45;
 
     public static final int CONTENT_ROWS = 5;
     /** At most 7 cards per row keeps a backdrop-only margin column on each side for a framed look. */
@@ -158,6 +160,42 @@ public final class GuiKit {
         meta.lore(lore);
         item.setItemMeta(meta);
         return item;
+    }
+
+    private static final java.util.UUID CREATOR_UUID =
+            java.util.UUID.fromString("a318f9f4-e2bf-479c-a47a-6a2c1b0b9e66");
+    private static final String CREATOR_NAME = "F_PP";
+
+    /**
+     * The plugin credit: the creator's head with the version / build ID. Decorative only - menus
+     * place it at {@link #SLOT_CREDIT} and never give that slot a click action.
+     */
+    public static ItemStack creditHead(Plugin plugin) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta meta = item.getItemMeta();
+        if (meta instanceof org.bukkit.inventory.meta.SkullMeta skull) {
+            skull.setPlayerProfile(Bukkit.createProfile(CREATOR_UUID));
+        }
+        meta.displayName(Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(text("[", DARK_GRAY, false))
+                .append(smallCaps("fake player plugin", ACCENT, true))
+                .append(text("]", DARK_GRAY, false)));
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.empty());
+        lore.add(creditRow("created by", CREATOR_NAME));
+        lore.add(creditRow("version", plugin.getPluginMeta().getVersion()));
+        lore.add(creditRow("build", me.bill.fakePlayerPlugin.util.BuildInfo.id()));
+        meta.lore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private static Component creditRow(String label, String value) {
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(smallCaps(label + "  ", GRAY, false))
+                .append(text(value, WHITE, false));
     }
 
     public static ItemStack closeButton() {

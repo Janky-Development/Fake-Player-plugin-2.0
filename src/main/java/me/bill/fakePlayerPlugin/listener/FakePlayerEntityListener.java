@@ -353,21 +353,10 @@ public class FakePlayerEntityListener implements Listener {
             if (deadPlayer != null) {
                 manager.markDespawning(deadPlayer.getUniqueId(), deathDespawnName);
             }
-            notifyOwnerOfDeathDespawn(fp, deathDespawnName, killer);
             FppScheduler.runSyncLater(
                     plugin,
                     () -> {
-                        manager.broadcastSyntheticQuit(
-                                fp, deathDespawnName, Config.leaveMessage(), PlayerQuitEvent.QuitReason.DISCONNECTED);
-                        Config.debugNmsBot("Broadcasted death quit for '" + name + "'");
-
-                        if (Config.leaveMessage()) {
-                            var vc = plugin.getVelocityChannel();
-                            if (vc != null) {
-                                vc.broadcastLeaveToNetwork(deathDespawnName);
-                                Config.debugNmsBot("Broadcasted death to network for '" + name + "'");
-                            }
-                        }
+                        manager.fireSyntheticQuit(fp, PlayerQuitEvent.QuitReason.DISCONNECTED);
 
                         List<Player> onlinePlayers = new ArrayList<>(Bukkit.getOnlinePlayers());
                         PacketHelper.broadcastTabListRemove(fp, onlinePlayers);
@@ -410,22 +399,6 @@ public class FakePlayerEntityListener implements Listener {
      * Tells the bot's owner and whoever killed it (if online, and not the same person twice) that it
      * died and was removed (respawn-on-death is off). No one else sees this.
      */
-    private void notifyOwnerOfDeathDespawn(FakePlayer fp, String displayName, @Nullable Player killer) {
-        Component message = Lang.get("bot-died-despawned", "name", displayName);
-
-        UUID ownerUuid = fp.getSpawnedByUuid();
-        Player owner = ownerUuid != null ? Bukkit.getPlayer(ownerUuid) : null;
-        if (owner != null && owner.isOnline()) {
-            owner.sendMessage(message);
-        }
-
-        if (killer != null && killer.isOnline() && !killer.getUniqueId().equals(ownerUuid)) {
-            killer.sendMessage(message);
-        }
-
-        Config.debugNmsBot("Bot '" + fp.getName() + "' died and was removed (respawnOnDeath=false)");
-    }
-
     @EventHandler(priority = EventPriority.HIGH)
     public void onBotRespawn(PlayerRespawnEvent event) {
         FakePlayer fp = manager.getByName(event.getPlayer().getName());

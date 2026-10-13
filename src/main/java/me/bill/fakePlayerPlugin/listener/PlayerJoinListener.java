@@ -55,7 +55,7 @@ public class PlayerJoinListener implements Listener {
         FakePlayer fp = manager.getByUuid(uuid);
         if (fp == null) return;
 
-        // Bot join messages were removed with the chat system.
+        // Bots never announce themselves: no join message.
         event.joinMessage(null);
 
         if (event.getPlayer().getFirstPlayed() != 0L) {

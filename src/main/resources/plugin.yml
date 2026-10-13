@@ -123,13 +123,8 @@ permissions:
       fpp.rent.info:            true
       fpp.rent.give:            true
       fpp.rent.unlimited:       true
-      fpp.rent.free:
-    description: >
-      Rent and extend without being charged (works with no economy plugin).
-      Still counts toward rental limits. Spawn price is waived by fpp.spawn.free.
-    default: op
-
-  fpp.rent.auto:            true
+      fpp.rent.free:            true
+      fpp.rent.auto:            true
       fpp.rent.admin:           true
       fpp.spawn.free:           true
       fpp.auth:                 true

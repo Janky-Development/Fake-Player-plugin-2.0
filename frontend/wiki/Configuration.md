@@ -60,10 +60,7 @@ Seconds between `/fpp spawn` uses. `0` = disabled.
 - `shift-right-click-settings: true` - shift+right-click opens bot settings GUI
 
 ### `messages`
-- `join-message: true` - broadcast join message
-- `leave-message: true` - broadcast leave message
-- `death-message: true` - broadcast vanilla death message
-- `kill-message: false` - broadcast when a real player kills a bot
+- Bots never produce chat events (join, leave, death, kill, advancement messages).
 - `notify-admins-on-join: true` - send compatibility warnings to admins on join
 
 ### `tab-list`

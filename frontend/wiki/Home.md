@@ -63,7 +63,7 @@ as `[Bot] - name` if an admin enables it), are never counted as players, always 
 - 🚀 **Spawn actions** - `/fpp spawn --name Guard attack --chase`, `--count`, `--preset`, `then`/`wait`
 - 💰 **Rent GUI & shop integration** - built-in rental shop, packages, `/fpp rent package <id>`,
   placeholders and a veto/re-price event; auto-renew, discounts, limits
-- 🧭 **`/fpp menu`** - main-menu hub; every menu reworked with centred cards and back navigation
+- 🧭 **`/fpp menu`** - main-menu hub; every menu reworked with centred cards and back navigation; the creator head with version and build ID sits at the bottom-left of every menu
 
 ---
 

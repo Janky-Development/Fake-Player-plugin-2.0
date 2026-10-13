@@ -534,6 +534,7 @@ public final class PerformanceReportExporter {
     private void summary(StringBuilder sb, PerfSnapshot perf) {
         section(sb, "SUMMARY");
         sb.append("FPP Version: ").append(plugin.getPluginMeta().getVersion()).append("\n");
+        sb.append("Build ID: ").append(me.bill.fakePlayerPlugin.util.BuildInfo.summary()).append("\n");
         sb.append("Server: ")
                 .append(Bukkit.getName())
                 .append(" ")

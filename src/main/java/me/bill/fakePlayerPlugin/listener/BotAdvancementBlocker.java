@@ -3,6 +3,7 @@ package me.bill.fakePlayerPlugin.listener;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerAdvancementDoneEvent;
 
 import com.destroystokyo.paper.event.player.PlayerAdvancementCriterionGrantEvent;
 
@@ -25,6 +26,14 @@ public final class BotAdvancementBlocker implements Listener {
     public void onCriterionGrant(PlayerAdvancementCriterionGrantEvent event) {
         if (manager.getByUuid(event.getPlayer().getUniqueId()) != null) {
             event.setCancelled(true);
+        }
+    }
+
+    /** Defence in depth: should a bot ever complete one anyway, it is never announced in chat. */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onAdvancementDone(PlayerAdvancementDoneEvent event) {
+        if (manager.getByUuid(event.getPlayer().getUniqueId()) != null) {
+            event.message(null);
         }
     }
 }

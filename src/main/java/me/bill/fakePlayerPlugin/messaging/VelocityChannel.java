@@ -42,8 +42,6 @@ public final class VelocityChannel implements PluginMessageListener {
     public static final String SUBCHANNEL_BOT_DESPAWN = "BOT_DESPAWN";
     public static final String SUBCHANNEL_BOT_UPDATE = "BOT_UPDATE";
     public static final String SUBCHANNEL_ALERT = "ALERT";
-    public static final String SUBCHANNEL_JOIN = "JOIN";
-    public static final String SUBCHANNEL_LEAVE = "LEAVE";
     public static final String SUBCHANNEL_SYNC = "SYNC";
     public static final String SUBCHANNEL_RESYNC = "RESYNC";
     public static final String SUBCHANNEL_SERVER_OFFLINE = "SERVER_OFFLINE";
@@ -259,11 +257,6 @@ public final class VelocityChannel implements PluginMessageListener {
 
 
 
-    public void broadcastLeaveToNetwork(String displayName) {
-        if (!Config.isNetworkMode()) return;
-        String msgId = generateAndTrackId();
-        sendPluginMessage(SUBCHANNEL_LEAVE, msgId, displayName, Config.serverId());
-    }
 
 
 
@@ -385,8 +378,6 @@ public final class VelocityChannel implements PluginMessageListener {
                 case SUBCHANNEL_BOT_DESPAWN -> handleBotDespawn(in);
                 case SUBCHANNEL_BOT_UPDATE -> handleBotUpdate(in);
                 case SUBCHANNEL_ALERT -> handleAlert(in);
-                case SUBCHANNEL_JOIN -> handleJoin(in);
-                case SUBCHANNEL_LEAVE -> handleLeave(in);
                 case SUBCHANNEL_SYNC -> handleSync(in);
                 case SUBCHANNEL_RESYNC -> handleResync(in);
                 case SUBCHANNEL_SERVER_OFFLINE -> handleServerOffline(in);
@@ -477,30 +468,6 @@ public final class VelocityChannel implements PluginMessageListener {
         }
         trackIncoming(msgId);
         broadcastAlertLocally(message);
-    }
-
-    private void handleJoin(DataInputStream in) throws IOException {
-        String msgId = in.readUTF();
-        in.readUTF(); // display name (unused; join/leave formatting is event-driven locally)
-        String originServer = in.readUTF();
-
-        if (isDuplicate(msgId, originServer)) {
-            Config.debugNetwork("[VelocityChannel] JOIN echo suppressed.");
-            return;
-        }
-        trackIncoming(msgId);
-    }
-
-    private void handleLeave(DataInputStream in) throws IOException {
-        String msgId = in.readUTF();
-        in.readUTF(); // display name (unused; join/leave formatting is event-driven locally)
-        String originServer = in.readUTF();
-
-        if (isDuplicate(msgId, originServer)) {
-            Config.debugNetwork("[VelocityChannel] LEAVE echo suppressed.");
-            return;
-        }
-        trackIncoming(msgId);
     }
 
     private void handleBotUpdate(DataInputStream in) throws IOException {

@@ -118,6 +118,7 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
                     .map(RemoteBotEntry::displayName)
                     .collect(Collectors.joining(", "));
             case "version" -> plugin.getPluginMeta().getVersion();
+            case "build" -> BuildInfo.id();
             case "config_version" -> String.valueOf(Config.configVersion());
             case "uptime" -> formatUptime((System.currentTimeMillis() - plugin.getEnabledAt()) / 1000);
 
@@ -146,8 +147,6 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
             case "fall_damage" -> onOff(Config.fallDamageEnabled());
             case "respawn_on_death" -> onOff(Config.respawnOnDeath());
             case "hurt_sound" -> onOff(Config.hurtSound());
-            case "join_message" -> onOff(Config.joinMessage());
-            case "leave_message" -> onOff(Config.leaveMessage());
             case "metrics" -> onOff(Config.metricsEnabled());
             case "update_checker" -> onOff(Config.updateCheckerEnabled());
             case "badword_filter" -> onOff(Config.isBadwordFilterEnabled());

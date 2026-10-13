@@ -41,6 +41,9 @@ public final class FppLogger {
 
     private static final int KEY_WIDTH = 18;
 
+    /** Creator credit shown in the startup/shutdown banners. */
+    private static final String CREATOR = "F_PP";
+
     private static Logger logger;
 
     private FppLogger() {}
@@ -174,13 +177,15 @@ public final class FppLogger {
             long startupMs) {
         boldRule();
         info("  " + BOLD + BLUE + "FakePlayerPlugin" + RESET + WHITE + " v" + version + RESET);
+        info("  " + GRAY + "real fake players for Paper & Folia 1.21+" + RESET);
+        info("  " + GRAY + "created by " + WHITE + CREATOR + RESET);
         rule();
 
         section("Runtime");
+        kv("Build", BuildInfo.summary());
         String dbDisplay = dbSchemaVersion > 0 ? dbState + "  (schema v" + dbSchemaVersion + ")" : dbState;
         stateRow(resolveDbState(dbState), "Database", dbDisplay);
         kv("Config version", configVersion);
-        kv("Startup time", startupMs + "ms");
 
         section("Features");
         stateRow(persistEnabled ? RowState.OK : RowState.OFF, "Persistence", onOff(persistEnabled));
@@ -198,18 +203,21 @@ public final class FppLogger {
         kv("Max bots", maxBots == 0 ? "unlimited" : maxBots);
 
         rule();
-        success("  Ready: /fpp help");
+        success("  Ready in " + startupMs + "ms - type /fpp help to begin");
         boldRule();
     }
 
     public static void printShutdownBanner(int botsRemoved, long uptimeMs) {
         boldRule();
-        highlight("  ꜰᴀᴋᴇ ᴘʟᴀʏᴇʀ ᴘʟᴜɢɪɴ  -  shutting down");
+        highlight("  FakePlayerPlugin  -  shutting down");
+        info("  " + GRAY + "created by " + WHITE + CREATOR + RESET);
         rule();
-        kv("Session uptime", formatUptime(uptimeMs));
+        section("Session");
+        kv("Build", BuildInfo.summary());
+        kv("Uptime", formatUptime(uptimeMs));
         kv("Bots removed", botsRemoved);
-        boldRule();
-        info("  Goodbye!");
+        rule();
+        info("  " + (botsRemoved > 0 ? "All bots despawned" : "No bots were active") + " - see you next time!");
         boldRule();
     }
 

@@ -64,7 +64,7 @@ public final class SettingGui implements Listener {
     private static final int SIZE = 54;
     /** Cards per page - laid out centred on a backdrop (the 45-slot grid is only the content area). */
     private static final int SETTINGS_PER_PAGE = GuiKit.CONTENT_CAPACITY;
-    private static final int SLOT_RESET = 45;
+    private static final int SLOT_RESET = 44;
     private static final int SLOT_CAT_PREV = 46;
     private static final int SLOT_CAT_NEXT = 52;
     private static final int SLOT_CLOSE = 53;
@@ -510,6 +510,7 @@ public final class SettingGui implements Listener {
             }
         }
 
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(SLOT_RESET, buildResetAllButton());
 
         inv.setItem(

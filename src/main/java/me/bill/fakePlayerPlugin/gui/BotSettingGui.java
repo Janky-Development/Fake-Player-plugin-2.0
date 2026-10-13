@@ -80,11 +80,11 @@ public final class BotSettingGui implements Listener {
     private static final TextColor SELECTED_GREEN = GuiKit.SELECTED_GREEN;
 
     private static final int SIZE = 54;
-    private static final int SETTINGS_PER_PAGE = 45;
+    private static final int SETTINGS_PER_PAGE = 44;
     /** Longest allowed bot display name (visible characters) - keeps the floating name-tag readable. */
     private static final int RENAME_MAX_LENGTH = 32;
 
-    private static final int SLOT_RESET = 45;
+    private static final int SLOT_RESET = 44;
     private static final int SLOT_CAT_PREV = 46;
     private static final int SLOT_CAT_NEXT = 52;
     private static final int SLOT_CLOSE = 53;
@@ -93,8 +93,8 @@ public final class BotSettingGui implements Listener {
 
     private static final int MOB_GUI_SIZE = 54;
     private static final int MOB_SLOTS = 45;
-    private static final int MOB_SLOT_BACK = 45;
-    private static final int MOB_SLOT_PREV_PAGE = 46;
+    private static final int MOB_SLOT_BACK = 46;
+    private static final int MOB_SLOT_PREV_PAGE = 47;
     private static final int MOB_SLOT_CLEAR = 49;
     private static final int MOB_SLOT_NEXT_PAGE = 52;
     private static final int MOB_SLOT_CLOSE = 53;
@@ -330,6 +330,7 @@ public final class BotSettingGui implements Listener {
             inv.setItem(i - startIdx, buildEntryItem(entries.get(i), bot, player));
         }
 
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(SLOT_RESET, buildResetButton());
         inv.setItem(
                 SLOT_CAT_PREV, catOffset > 0 ? buildCatArrow(false) : glassFiller(Material.GRAY_STAINED_GLASS_PANE));
@@ -457,7 +458,7 @@ public final class BotSettingGui implements Listener {
             }
             return;
         }
-        if (slot < 45) {
+        if (slot < SETTINGS_PER_PAGE) {
             List<BotCategory> allCats = allCategories(player);
             if (catIdx >= allCats.size()) return;
             List<BotEntry> entries = visibleEntries(allCats.get(catIdx), isOp);
@@ -1143,6 +1144,7 @@ public final class BotSettingGui implements Listener {
             inv.setItem(i - startIdx, buildMobItem(mob, selected));
         }
 
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(MOB_SLOT_BACK, buildMobBarItem(Material.ARROW, "◄  ʙᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ", ACCENT));
 
         inv.setItem(
@@ -1312,6 +1314,7 @@ public final class BotSettingGui implements Listener {
             inv.setItem(i - startIdx, buildFoodItem(food, selected.contains(food.material())));
         }
 
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(MOB_SLOT_BACK, buildMobBarItem(Material.ARROW, "◄  ʙᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ", ACCENT));
         inv.setItem(
                 MOB_SLOT_PREV_PAGE,
@@ -1493,8 +1496,9 @@ public final class BotSettingGui implements Listener {
             item.setItemMeta(meta);
             inv.setItem(22, item);
         }
-        inv.setItem(45, buildMobBarItem(Material.ARROW, "◄  ʙᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ", ACCENT));
-        for (int i = 46; i < 53; i++) inv.setItem(i, glassFiller(Material.GRAY_STAINED_GLASS_PANE));
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
+        inv.setItem(46, buildMobBarItem(Material.ARROW, "◄  ʙᴀᴄᴋ ᴛᴏ ꜱᴇᴛᴛɪɴɢꜱ", ACCENT));
+        for (int i = 47; i < 53; i++) inv.setItem(i, glassFiller(Material.GRAY_STAINED_GLASS_PANE));
         inv.setItem(53, buildCloseButton());
         player.openInventory(inv);
     }
@@ -1534,7 +1538,7 @@ public final class BotSettingGui implements Listener {
             player.closeInventory();
             return;
         }
-        if (slot == 45) {
+        if (slot == 46) {
             playUiClick(player, 1.0f);
             pendingRebuild.add(uuid);
             build(player);

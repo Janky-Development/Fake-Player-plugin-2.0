@@ -763,25 +763,20 @@ public class FakePlayerManager {
                 1L);
     }
 
-    public void broadcastSyntheticQuit(
-            FakePlayer fp, String displayName, boolean useDefaultMessage, PlayerQuitEvent.QuitReason reason) {
+    /**
+     * Fires a quit event for a bot that is being removed by us. Bots never produce a leave message:
+     * the event carries none and nothing is ever sent to chat or the console. The event itself is
+     * still required so other plugins and the despawn handling see the departure.
+     */
+    public void fireSyntheticQuit(FakePlayer fp, PlayerQuitEvent.QuitReason reason) {
         if (fp == null) return;
         Player player = fp.getPlayer();
         if (player == null) player = fp.getPhysicsEntity();
         if (player == null) return;
 
-        // Bot leave messages were removed with the chat system; fire the quit event with no
-        // default message. The synthetic quit event itself is still required for despawn handling.
         PlayerQuitEvent quitEvent = new PlayerQuitEvent(player, (Component) null, reason);
         Bukkit.getPluginManager().callEvent(quitEvent);
         syntheticQuitBotIds.add(fp.getUuid());
-
-        Component message = quitEvent.quitMessage();
-        if (message == null) return;
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (online != null && online.isOnline()) online.sendMessage(message);
-        }
-        Bukkit.getConsoleSender().sendMessage(message);
     }
 
 
@@ -1735,24 +1730,14 @@ public class FakePlayerManager {
                 }
 
                 String despawnName = resolveDespawnDisplayName(target);
-                boolean broadcastLeave = Config.leaveMessage() && !renamingBotIds.contains(target.getUuid());
-                despawningBotIds.put(target.getUuid(), broadcastLeave ? despawnName : "");
+                despawningBotIds.put(target.getUuid(), "");
                 FppLogger.debug(
                         "NMS-BOT",
                         Config.debugNmsBot(),
                         "Bulk removing '" + target.getName() + "' (reason: " + reason + ")");
 
-                if (broadcastLeave) {
-                    var vc3 = plugin.getVelocityChannel();
-                    if (vc3 != null) {
-                        vc3.broadcastLeaveToNetwork(despawnName);
-                        FppLogger.debug(
-                                "NMS-BOT", Config.debugNmsBot(), "Broadcasted leave for '" + target.getName() + "'");
-                    }
-                }
                 if (!renamingBotIds.contains(target.getUuid())) {
-                    broadcastSyntheticQuit(
-                            target, despawnName, broadcastLeave, PlayerQuitEvent.QuitReason.DISCONNECTED);
+                    fireSyntheticQuit(target, PlayerQuitEvent.QuitReason.DISCONNECTED);
                 }
                 try {
                     if (explicitUuidSpawn) {
@@ -2152,29 +2137,15 @@ public class FakePlayerManager {
                 }
 
                 String despawnName = resolveDespawnDisplayName(target);
-                boolean broadcastLeave =
-                        Config.leaveMessage() && !renamingBotIds.contains(target.getUuid()) && !suppressLeaveBroadcast;
-                despawningBotIds.put(target.getUuid(), broadcastLeave ? despawnName : "");
+                despawningBotIds.put(target.getUuid(), "");
 
                 FppLogger.debug(
                         "NMS-BOT",
                         Config.debugNmsBot(),
-                        "Bot '" + botName + "' marked as despawning (broadcastLeave=" + broadcastLeave + ", reason: "
-                                + reason + ")");
+                        "Bot '" + botName + "' marked as despawning (reason: " + reason + ")");
 
-                if (broadcastLeave) {
-                    var vc3 = plugin.getVelocityChannel();
-                    if (vc3 != null) {
-                        vc3.broadcastLeaveToNetwork(despawnName);
-                        FppLogger.debug(
-                                "NMS-BOT", Config.debugNmsBot(), "Broadcasted leave to network for '" + botName + "'");
-                    }
-                }
                 if (!renamingBotIds.contains(target.getUuid()) && !suppressLeaveBroadcast) {
-                    broadcastSyntheticQuit(
-                            target, despawnName, broadcastLeave, PlayerQuitEvent.QuitReason.DISCONNECTED);
-                    FppLogger.debug(
-                            "NMS-BOT", Config.debugNmsBot(), "Broadcasted synthetic quit for '" + botName + "'");
+                    fireSyntheticQuit(target, PlayerQuitEvent.QuitReason.DISCONNECTED);
                 }
 
                 try {
@@ -2280,10 +2251,8 @@ public class FakePlayerManager {
 
         for (FakePlayer fp : toRemove) {
             boolean explicitUuidSpawn = isExplicitUuidSpawn(fp);
-            String despawnName = resolveDespawnDisplayName(fp);
-            boolean broadcastLeave = Config.leaveMessage();
-            despawningBotIds.put(fp.getUuid(), broadcastLeave ? despawnName : "");
-            broadcastSyntheticQuit(fp, despawnName, broadcastLeave, PlayerQuitEvent.QuitReason.DISCONNECTED);
+            despawningBotIds.put(fp.getUuid(), "");
+            fireSyntheticQuit(fp, PlayerQuitEvent.QuitReason.DISCONNECTED);
 
             try {
                 if (explicitUuidSpawn || fastShutdown) {

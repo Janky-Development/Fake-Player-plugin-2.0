@@ -109,7 +109,6 @@ delete-num-success:    "{prefix}<#A78BFA>{count}</#A78BFA> <#9691AB>ꜰᴀᴋᴇ
 delete-own-success:    "{prefix}<#A78BFA>{count}</#A78BFA> <#9691AB>ʏᴏᴜʀ ꜰᴀᴋᴇ ᴘʟᴀʏᴇʀ(ꜱ) <#EEECF7>ᴅɪꜱᴄᴏɴɴᴇᴄᴛᴇᴅ<#9691AB>."
 despawn-num-usage:     "{prefix}<#FF6A5C>ᴜꜱᴀɢᴇ: <#EEECF7>/fpp despawn --num <num></#EEECF7>."
 # Sent to the bot's owner when it dies and respawn-on-death is off (so it's despawned, not respawned)
-bot-died-despawned:    "{prefix}<#A78BFA>{name}</#A78BFA> <#9691AB>ᴅɪᴇᴅ ᴀɴᴅ ᴡᴀꜱ <#EEECF7>ʀᴇᴍᴏᴠᴇᴅ<#9691AB> <#5F5B73>(ʀᴇꜱᴘᴀᴡɴ ᴏɴ ᴅᴇᴀᴛʜ ɪꜱ ᴏꜰꜰ)<#9691AB>."
 
 
 # ═════════════════════════════════════════════════════════════════════════════

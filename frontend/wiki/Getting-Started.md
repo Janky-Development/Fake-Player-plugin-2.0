@@ -44,6 +44,7 @@ Requires JDK 21+ and the Gradle wrapper.
 
 - Output: `build/libs/fake-player-plugin-<version>-all.jar`
 - The runnable plugin task is `shadowJar`; plain `jar` is not the final server plugin.
+- Every build gets a fresh **build ID** (`D<yyMMdd>-<HHmmss UTC>-<hex>`), stamped into the jar as `fpp-build.properties`. It is shown in the startup/shutdown banners, the credit head in every menu, `%fpp_build%`, performance reports and backups, so you can always tell two jars with the same version apart.
 
 The build depends on the **paperweight** Paper dev bundle (`26.1.2.build.65-stable`). Gradle downloads this automatically via the Paperweight plugin.
 

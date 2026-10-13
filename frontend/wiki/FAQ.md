@@ -31,7 +31,7 @@ globally via `/fpp settings` → 🐛 ᴅᴇʙᴜɢ → ꜱʜᴏᴡ ᴀʟʟ ᴘ�
 ### Q: Why don't bots show in the tab list or server-list player count?
 **A:** By design. Bots are unlisted in the tab by default, subtracted from the server-list ping
 count, and removed from its hover sample. They also earn no advancements and send no
-join/leave/death chat messages. An admin can enable `tab-list.enabled` (or the Body toggle in
+join/leave/death/advancement chat messages (bots never produce chat events at all). An admin can enable `tab-list.enabled` (or the Body toggle in
 `/fpp settings`); bots are then listed only as `[Bot] - <botname>`. They are never counted as
 players in `%fpp_online%` / `%fpp_total%` either way.
 
@@ -215,6 +215,9 @@ regardless of what `rentalExpiresAt` they were given.
 - Use `/fpp perf top` / `/fpp perf report` to measure
 
 ## Building
+
+### Q: How do I tell which jar I am running?
+**A:** Check the **Build** row in the startup banner, hover the creator head at the bottom-left of any menu, or use `%fpp_build%`. The build ID changes on every build.
 
 ### Q: How do I build from source?
 **A:** JDK 21+ and `./gradlew clean shadowJar`. The paperweight dev bundle downloads automatically.

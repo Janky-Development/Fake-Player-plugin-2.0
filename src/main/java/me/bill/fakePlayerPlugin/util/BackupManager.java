@@ -140,6 +140,7 @@ public final class BackupManager {
             pw.println("FakePlayerPlugin Backup Manifest");
             pw.println("================================");
             pw.println("Plugin version : " + plugin.getPluginMeta().getVersion());
+            pw.println("Build ID       : " + BuildInfo.summary());
             pw.println("Backup reason  : " + reason);
             pw.println("Timestamp      : " + LocalDateTime.now());
             pw.println("Server version : " + plugin.getServer().getVersion());

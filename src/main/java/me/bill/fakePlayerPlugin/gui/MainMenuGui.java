@@ -245,6 +245,7 @@ public final class MainMenuGui implements Listener {
         }
 
         GuiKit.fillFooter(inv);
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(GuiKit.SLOT_BACK, GuiKit.closeButton());
 
         pendingRebuild.add(uuid);

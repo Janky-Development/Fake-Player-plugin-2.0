@@ -47,13 +47,13 @@ public final class BotListGui implements Listener {
     private static final int SIZE = 54;
     /** Bots per page: centred cards on a backdrop (rows 0-4, 7 per row). */
     private static final int PER_PAGE = GuiKit.CONTENT_CAPACITY;
-    private static final int SLOT_SORT = 45;
-    private static final int SLOT_SEARCH = 46;
-    private static final int SLOT_SPAWN = 47;
-    private static final int SLOT_PREV = 48;
-    private static final int SLOT_INFO = 49;
-    private static final int SLOT_NEXT = 50;
-    private static final int SLOT_SETTINGS = 51;
+    private static final int SLOT_SORT = 46;
+    private static final int SLOT_SEARCH = 47;
+    private static final int SLOT_SPAWN = 48;
+    private static final int SLOT_PREV = 49;
+    private static final int SLOT_INFO = 50;
+    private static final int SLOT_NEXT = 51;
+    private static final int SLOT_SETTINGS = 52;
     private static final int SLOT_CLOSE = 53;
     private static final long REFRESH_PERIOD_TICKS = 20L;
 
@@ -163,6 +163,7 @@ public final class BotListGui implements Listener {
 
         ItemStack filler = GuiKit.glassFiller(Material.GRAY_STAINED_GLASS_PANE);
         for (int s = 45; s <= 53; s++) inv.setItem(s, filler);
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(SLOT_SORT, sortItem(sortModes.getOrDefault(uuid, SortMode.NAME)));
         inv.setItem(SLOT_SEARCH, GuiKit.buildSearchItem(filters.get(uuid)));
         inv.setItem(SLOT_INFO, infoItem(admin, bots.size(), page, totalPages));

@@ -97,13 +97,13 @@ public final class HelpGui implements Listener {
     private static final Category[] CATEGORIES = Category.values();
 
     private static final int SIZE = 54;
-    // One slot shy of a full 45-slot grid, deliberately - the freed slot 44 holds the info head
-    // below, since row 6 (45-53) is entirely spoken for by nav + a tab per Category.values() (see
-    // CAT_SLOT_START) and has no room left for it.
+    // One slot shy of a full 45-slot grid, deliberately - the freed slot 44 holds the prev-page
+    // arrow, since the bottom-left slot 45 is the creator's credit head and the rest of row 6
+    // (46-53) is spoken for by a tab per Category.values() (see CAT_SLOT_START) plus next/close.
     private static final int CMDS_PER_PAGE = 44;
-    private static final int SLOT_INFO_HEAD = 44;
+    private static final int SLOT_INFO_HEAD = GuiKit.SLOT_CREDIT;
 
-    private static final int SLOT_PAGE_PREV = 45;
+    private static final int SLOT_PAGE_PREV = 44;
     private static final int CAT_SLOT_START = 46;
     private static final int SLOT_PAGE_NEXT = 52;
     private static final int SLOT_CLOSE = 53;
@@ -229,7 +229,7 @@ public final class HelpGui implements Listener {
         }
 
         ItemStack filler = glassFiller(Material.GRAY_STAINED_GLASS_PANE);
-        for (int s = SLOT_INFO_HEAD; s <= 53; s++) inv.setItem(s, filler);
+        for (int s = SLOT_PAGE_PREV; s <= 53; s++) inv.setItem(s, filler);
 
         inv.setItem(SLOT_INFO_HEAD, buildInfoHead(plugin));
 
@@ -530,6 +530,7 @@ public final class HelpGui implements Listener {
         }
 
         lore.add(infoRow("ᴠᴇʀꜱɪᴏɴ", version));
+        lore.add(infoRow("ʙᴜɪʟᴅ", me.bill.fakePlayerPlugin.util.BuildInfo.id()));
         lore.add(infoRow("ᴀᴜᴛʜᴏʀ", author));
 
         if (rawPlugin instanceof FakePlayerPlugin fpp) {

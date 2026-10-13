@@ -22,6 +22,7 @@ All identifiers are prefixed with `%fpp_`.
 | `%fpp_names%` | Comma-separated bot names (includes remote in NETWORK mode) |
 | `%fpp_network_names%` | Comma-separated remote bot names |
 | `%fpp_version%` | Plugin version string |
+| `%fpp_build%` | Build ID of the running jar (e.g. `D261013-140738-f3c1`) |
 | `%fpp_config_version%` | Config version number |
 | `%fpp_uptime%` | Plugin uptime (e.g. `4h 12m`) |
 
@@ -50,8 +51,6 @@ All identifiers are prefixed with `%fpp_`.
 | `%fpp_fall_damage%` | `on` or `off` |
 | `%fpp_respawn_on_death%` | `on` or `off` |
 | `%fpp_hurt_sound%` | `on` or `off` |
-| `%fpp_join_message%` | `on` or `off` |
-| `%fpp_leave_message%` | `on` or `off` |
 | `%fpp_death_message%` | `on` or `off` |
 | `%fpp_metrics%` | `on` or `off` |
 | `%fpp_update_checker%` | `on` or `off` |

@@ -524,14 +524,6 @@ public final class Config {
         return BotNameConfig.getNames();
     }
 
-    public static boolean joinMessage() {
-        return cfg.getBoolean("messages.join-message", true);
-    }
-
-    public static boolean leaveMessage() {
-        return cfg.getBoolean("messages.leave-message", true);
-    }
-
     public static double maxHealth() {
         return cfg.getDouble("combat.max-health", 20.0);
     }

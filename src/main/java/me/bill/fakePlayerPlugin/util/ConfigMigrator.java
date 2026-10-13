@@ -902,10 +902,9 @@ public final class ConfigMigrator {
     }
 
     private static boolean v63to64(YamlConfiguration cfg) {
-        boolean changed = false;
-        changed |= setIfMissing(cfg, "messages.death-message", true);
-        if (changed) log("v63→v64", "added messages.death-message (default true)");
-        return changed;
+        // messages.death-message used to be added here; bots no longer produce any chat events,
+        // so the key is gone and this step is intentionally a no-op.
+        return false;
     }
 
     private static boolean v64to65(YamlConfiguration cfg) {

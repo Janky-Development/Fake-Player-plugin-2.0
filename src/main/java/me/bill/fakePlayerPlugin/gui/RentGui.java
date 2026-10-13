@@ -51,9 +51,9 @@ public final class RentGui implements Listener {
     private static final String KIND = "rent";
     private static final long CONFIRM_MS = 6_000L;
 
-    private static final int SLOT_INFO = 45;
-    private static final int SLOT_NAV = 46;
-    private static final int SLOT_RENTALS = 47;
+    private static final int SLOT_INFO = 46;
+    private static final int SLOT_NAV = 47;
+    private static final int SLOT_RENTALS = 48;
 
     private enum View {
         SHOP,
@@ -134,6 +134,7 @@ public final class RentGui implements Listener {
         for (int i = 0; i < shown; i++) inv.setItem(slots.get(i), cards.get(i).item());
 
         GuiKit.fillFooter(inv);
+        inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(SLOT_INFO, infoCard(viewer));
         if (s.view != View.SHOP) {
             inv.setItem(SLOT_NAV, simple(Material.ARROW, s.view == View.BOT ? "my rentals" : "shop", GuiKit.ACCENT,

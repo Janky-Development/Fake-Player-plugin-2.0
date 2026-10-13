@@ -228,15 +228,12 @@ bot-interaction:
   shift-right-click-settings: true
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# BROADCAST MESSAGES
+# MESSAGES
 # ═══════════════════════════════════════════════════════════════════════════════
-# leave-message controls network-relay behavior (Velocity/BungeeCord), not chat text - bots never
-# show join/leave/death/kill messages in chat.
-# notify-admins-on-join sends an additional notification to staff/admin users.
+# Bots never produce chat events: no join, leave, death, kill or advancement messages.
+# notify-admins-on-join sends a compatibility notification to staff/admin users (real players).
 # ═══════════════════════════════════════════════════════════════════════════════
 messages:
-  join-message: true
-  leave-message: true
   notify-admins-on-join: true
 
 # ═══════════════════════════════════════════════════════════════════════════════
