@@ -211,10 +211,6 @@ public final class PerformanceMonitor {
         return provider;
     }
 
-    public boolean isRunning() {
-        return running.get();
-    }
-
     public void runSparkProfiler(CommandSenderCallback callback) {
         if (!Config.performanceSparkEnabled()) {
             callback.send("Spark profiler integration is disabled in config.yml.");

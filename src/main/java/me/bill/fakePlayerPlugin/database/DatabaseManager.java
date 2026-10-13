@@ -10,7 +10,6 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -230,6 +229,11 @@ public class DatabaseManager {
             + "  extra_str   VARCHAR(256) DEFAULT NULL,"
             + "  extra_bool  BOOLEAN      DEFAULT 0,"
             + "  PRIMARY KEY (bot_uuid, server_id, task_type)"
+            + ")";
+
+    private static final String CREATE_RENTAL_AUTO = "CREATE TABLE IF NOT EXISTS fpp_rental_auto ("
+            + "  bot_uuid VARCHAR(36) NOT NULL PRIMARY KEY,"
+            + "  hours    INT         NOT NULL"
             + ")";
 
     private static final String CREATE_DESPAWN_SNAPSHOTS = "CREATE TABLE IF NOT EXISTS fpp_despawn_snapshots ("
@@ -623,6 +627,7 @@ public class DatabaseManager {
         exec(isMysql ? CREATE_TASKS_MYSQL : CREATE_TASKS_SQLITE);
         exec(isMysql ? CREATE_SKIN_CACHE_MYSQL : CREATE_SKIN_CACHE_SQLITE);
         exec(CREATE_DESPAWN_SNAPSHOTS);
+        exec(CREATE_RENTAL_AUTO);
         exec(CREATE_EXTENSION_DATA);
         exec(CREATE_META);
         exec(CREATE_NETWORK_BOTS);
@@ -749,10 +754,6 @@ public class DatabaseManager {
         execSilent("ALTER TABLE fpp_active_bots ADD COLUMN ping_user_set BOOLEAN DEFAULT 0");
         execSilent(CREATE_EXTENSION_DATA);
         FppLogger.info("  DB schema: restored extension persistence columns.");
-    }
-
-    private void dropColumn(String table, String column) {
-        execSilent("ALTER TABLE " + table + " DROP COLUMN " + column);
     }
 
     private int getSchemaVersion() {
@@ -1927,9 +1928,7 @@ public class DatabaseManager {
         }
     }
 
-    public int countSessions() {
-        return getTotalSessionCount();
-    }
+
 
     public int countActiveBotRows() {
         if (!isAlive()) return 0;
@@ -2185,6 +2184,44 @@ public class DatabaseManager {
         });
     }
 
+    /** Persists a bot's rental auto-renew choice; {@code hours <= 0} removes it. */
+    public void setRentalAutoRenew(String botUuid, int hours) {
+        if (!isAlive()) return;
+        enqueue(() -> {
+            if (!isAlive()) return;
+            try (PreparedStatement del =
+                    connection.prepareStatement("DELETE FROM fpp_rental_auto WHERE bot_uuid=?")) {
+                del.setString(1, botUuid);
+                del.executeUpdate();
+            } catch (SQLException e) {
+                FppLogger.error("DB setRentalAutoRenew(delete): " + e.getMessage());
+                return;
+            }
+            if (hours <= 0) return;
+            try (PreparedStatement ins =
+                    connection.prepareStatement("INSERT INTO fpp_rental_auto (bot_uuid,hours) VALUES (?,?)")) {
+                ins.setString(1, botUuid);
+                ins.setInt(2, hours);
+                ins.executeUpdate();
+            } catch (SQLException e) {
+                FppLogger.error("DB setRentalAutoRenew(insert): " + e.getMessage());
+            }
+        });
+    }
+
+    /** Synchronous read of every bot's auto-renew hours, keyed by bot UUID string. */
+    public Map<String, Integer> loadRentalAutoRenew() {
+        Map<String, Integer> out = new java.util.HashMap<>();
+        if (!isAlive()) return out;
+        try (Statement st = connection.createStatement();
+                ResultSet rs = st.executeQuery("SELECT bot_uuid,hours FROM fpp_rental_auto")) {
+            while (rs.next()) out.put(rs.getString("bot_uuid"), rs.getInt("hours"));
+        } catch (SQLException e) {
+            FppLogger.error("DB loadRentalAutoRenew: " + e.getMessage());
+        }
+        return out;
+    }
+
     /** {@code -1} for either value means "use the config default" - matches FakePlayer's own sentinel. */
     public void updateBotClickIntervals(String uuid, int leftClickIntervalTicks, int rightClickIntervalTicks) {
         if (!isAlive()) return;
@@ -2222,9 +2259,7 @@ public class DatabaseManager {
         return isMysql;
     }
 
-    public Map<String, BotRecord> getActiveRecords() {
-        return Collections.unmodifiableMap(activeRecords);
-    }
+
 
     public void setBotExtensionData(String botUuid, String extensionKey, String dataKey, String dataValue) {
         if (!isAlive()) return;

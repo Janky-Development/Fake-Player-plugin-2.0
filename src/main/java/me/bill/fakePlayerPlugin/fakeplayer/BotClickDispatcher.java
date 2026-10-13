@@ -5,7 +5,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.jetbrains.annotations.Nullable;
 
 import me.bill.fakePlayerPlugin.config.Config;
@@ -19,7 +18,6 @@ import net.minecraft.network.protocol.game.ServerboundAttackPacket;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerLoadedPacket;
-import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -99,47 +97,113 @@ public final class BotClickDispatcher {
                         nextSequence(nms)));
     }
 
-    // ── Swing (arm animation) ───────────────────────────────────────────────────────────────────
+    // ── Swing / punch ───────────────────────────────────────────────────────────────────────────
 
+    // 26.3 replaced ServerboundSwingPacket with the argument-less ServerboundPunchPacket (left-click
+    // only; use-swings became server-driven). Probe once so the same jar works on both protocols.
+    private static volatile boolean swingProbed;
+    private static volatile Constructor<?> swingCtor;
+    private static volatile Object punchInstance;
+
+    private static void probeSwing() {
+        if (swingProbed) return;
+        synchronized (BotClickDispatcher.class) {
+            if (swingProbed) return;
+            try {
+                Class<?> punch = Class.forName("net.minecraft.network.protocol.game.ServerboundPunchPacket");
+                punchInstance = punch.getField("INSTANCE").get(null);
+            } catch (Throwable ignored) {
+                // pre-26.3 protocol - fall back to the swing packet below
+            }
+            try {
+                Class<?> swing = Class.forName("net.minecraft.network.protocol.game.ServerboundSwingPacket");
+                swingCtor = swing.getConstructor(InteractionHand.class);
+            } catch (Throwable ignored) {
+                // 26.3+: no swing packet exists
+            }
+            swingProbed = true;
+        }
+    }
+
+    /**
+     * The left-click arm swing a real client sends with every attack / dig tick: the dedicated punch
+     * packet where the protocol has one, else a main-hand swing.
+     */
+    @SuppressWarnings("unchecked")
+    public static void punch(ServerPlayer nms) {
+        probeSwing();
+        if (punchInstance != null) {
+            dispatch(nms, (Packet<ServerGamePacketListener>) punchInstance);
+        } else {
+            swing(nms, InteractionHand.MAIN_HAND);
+        }
+    }
+
+    /**
+     * A client-sourced arm swing after a successful interaction. Only meaningful on protocols that still
+     * have a swing packet; on 26.3+ the server swings for use-actions itself.
+     */
+    @SuppressWarnings("unchecked")
     public static void swing(ServerPlayer nms, InteractionHand hand) {
-        dispatch(nms, new ServerboundSwingPacket(hand));
+        probeSwing();
+        if (swingCtor == null) return;
+        try {
+            dispatch(nms, (Packet<ServerGamePacketListener>) swingCtor.newInstance(hand));
+        } catch (Throwable t) {
+            Config.debugNms("BotClickDispatcher.swing failed: " + t.getMessage());
+        }
+    }
+
+    /** Spear stab ({@code Action.STAB}). */
+    public static void stab(ServerPlayer nms) {
+        dispatch(
+                nms,
+                new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.STAB, BlockPos.ZERO, Direction.DOWN, 0));
+    }
+
+    /** Releases a held use-item (bow, shield, food…) - the client's key-up while {@code isUsingItem}. */
+    public static void releaseUse(ServerPlayer nms) {
+        dispatch(
+                nms,
+                new ServerboundPlayerActionPacket(
+                        ServerboundPlayerActionPacket.Action.RELEASE_USE_ITEM, BlockPos.ZERO, Direction.DOWN, 0));
+    }
+
+    /** Re-faces an in-progress dig; the action only exists on newer protocols, so it is looked up by name. */
+    public static void changeDestroyDirection(ServerPlayer nms, BlockPos pos, Direction face) {
+        try {
+            ServerboundPlayerActionPacket.Action action =
+                    ServerboundPlayerActionPacket.Action.valueOf("CHANGE_DESTROY_DIRECTION");
+            dispatch(nms, new ServerboundPlayerActionPacket(action, pos, face, 0));
+        } catch (IllegalArgumentException ignored) {
+            // protocol predates the action - the server re-derives the face from the next tick anyway
+        }
     }
 
     // ── Left-click: entity attack ───────────────────────────────────────────────────────────────
 
-    public static void attack(ServerPlayer nms, org.bukkit.entity.Entity target) {
-        net.minecraft.world.entity.Entity nmsTarget = ((CraftEntity) target).getHandle();
-        // Bots aren't driven by the normal player tick path, so two things a real client gets for
-        // free must be done explicitly: register the held weapon's attribute modifiers (otherwise
-        // ATTACK_DAMAGE stays at fist level) and top up the attack-strength ticker (otherwise every
-        // hit is scaled to the ~20% spam-click minimum). The click loop paces attacks at the real
-        // weapon cooldown, so full strength per hit is the faithful result.
-        try {
-            nms.detectEquipmentUpdates();
-        } catch (Throwable t) {
-            Config.debugNms("BotClickDispatcher.attack detectEquipmentUpdates failed: " + t.getMessage());
-        }
-        NmsPlayerSpawner.primeAttackStrength(nms.getBukkitEntity());
-        dispatch(nms, new ServerboundAttackPacket(nmsTarget.getId()));
+    public static void attack(ServerPlayer nms, net.minecraft.world.entity.Entity target) {
+        dispatch(nms, new ServerboundAttackPacket(target.getId()));
     }
 
     // ── Right-click: entity interact ────────────────────────────────────────────────────────────
 
     /**
-     * Right-click an entity, exactly like a real client's interact packet. {@code absoluteHit}, when
-     * non-null, is the world-space point the bot aimed at; it is converted to the entity-relative
-     * vector the vanilla packet carries so armor-stand equipping, feeding, taming, breeding, mounting,
-     * leashing and trading behave as for a real player.
+     * Right-click an entity exactly like a real client's interact packet. {@code relativeHit} is the
+     * hit point relative to the entity's position (what the vanilla packet carries) so armor-stand
+     * equipping, feeding, taming, breeding, mounting, leashing and trading behave as for a real player.
      */
     public static void interactEntity(
             ServerPlayer nms,
-            org.bukkit.entity.Entity target,
+            net.minecraft.world.entity.Entity target,
             InteractionHand hand,
-            @Nullable Vec3 absoluteHit,
+            @Nullable Vec3 relativeHit,
             boolean sneaking) {
-        net.minecraft.world.entity.Entity nmsTarget = ((CraftEntity) target).getHandle();
-        Vec3 relative = absoluteHit != null ? absoluteHit.subtract(nmsTarget.position()) : Vec3.ZERO;
-        dispatch(nms, new ServerboundInteractPacket(nmsTarget.getId(), hand, relative, sneaking));
+        dispatch(
+                nms,
+                new ServerboundInteractPacket(
+                        target.getId(), hand, relativeHit != null ? relativeHit : Vec3.ZERO, sneaking));
     }
 
     // ── Right-click: use item on a block ────────────────────────────────────────────────────────

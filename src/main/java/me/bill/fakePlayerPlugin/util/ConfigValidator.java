@@ -13,21 +13,12 @@ public final class ConfigValidator {
         int issues = 0;
 
         if (Config.chunkLoadingEnabled()) {
-            int radius = Config.chunkLoadingRadius();
-            if (radius == 0) {
-                FppLogger.info("[Config] chunk-loading.radius is 0 - bots will not load any chunks.");
-            } else {
-                int viewDist = Bukkit.getSimulationDistance();
-                if (radius > viewDist) {
-                    FppLogger.warn("[Config] chunk-loading.radius ("
-                            + radius
-                            + ") exceeds "
-                            + "server simulation-distance ("
-                            + viewDist
-                            + "). "
-                            + "Tickets beyond simulation distance have no effect.");
-                    issues++;
-                }
+            int viewDistance = Config.chunkLoadingRadius();
+            if (viewDistance == 0) {
+                FppLogger.info("[Config] chunk-loading.view-distance is 0 - bots report the minimum render distance.");
+            } else if (viewDistance > 32) {
+                FppLogger.warn("[Config] chunk-loading.view-distance exceeds 32 (the client maximum) - clamping.");
+                issues++;
             }
         }
 

@@ -16,8 +16,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -238,10 +236,6 @@ public final class PacketHelper {
         return ready;
     }
 
-    private static final Pattern PKT_HEX_OPEN = Pattern.compile("<#([A-Fa-f0-9]{6})>");
-    private static final Pattern PKT_HEX_CLOSE = Pattern.compile("</#([A-Fa-f0-9]{6})>");
-    private static final Pattern PKT_3DIG_OPEN = Pattern.compile("<#([0-9A-Fa-f]{3})>");
-    private static final Pattern PKT_3DIG_CLOSE = Pattern.compile("</#([0-9A-Fa-f]{3})>");
 
     public static ProfilerToken profile(String section) {
         FakePlayerPlugin plugin = FakePlayerPlugin.getInstance();
@@ -251,60 +245,11 @@ public final class PacketHelper {
         return plugin.getProfiler().enter(section);
     }
 
-    public static ProfilerToken profileMethod(String section) {
-        FakePlayerPlugin plugin = FakePlayerPlugin.getInstance();
-        if (plugin == null) {
-            return ProfilerToken.NO_OP;
-        }
-        return plugin.getProfiler().enterMethod(section);
-    }
 
-    public static String convertHexColors(String input) {
-        input = expand3DigitHexCodesForPacket(input);
 
-        Matcher m = PKT_HEX_OPEN.matcher(input);
-        StringBuffer sb = new StringBuffer();
-        while (m.find()) {
-            String hex = m.group(1);
-            StringBuilder color = new StringBuilder("§x");
-            for (char c : hex.toCharArray()) color.append('§').append(c);
-            m.appendReplacement(sb, color.toString());
-        }
-        m.appendTail(sb);
-        String result = sb.toString();
 
-        result = PKT_HEX_CLOSE.matcher(result).replaceAll("§r");
-        return result;
-    }
 
-    private static String expand3DigitHexCodesForPacket(String s) {
-        if (s == null || s.indexOf('#') < 0) return s;
 
-        Matcher m = PKT_3DIG_OPEN.matcher(s);
-        StringBuffer sb = new StringBuffer();
-        while (m.find()) {
-            String hex3 = m.group(1);
-            String hex6 = String.format(
-                    "%c%c%c%c%c%c",
-                    hex3.charAt(0), hex3.charAt(0), hex3.charAt(1), hex3.charAt(1), hex3.charAt(2), hex3.charAt(2));
-            m.appendReplacement(sb, "<#" + hex6 + ">");
-        }
-        m.appendTail(sb);
-        s = sb.toString();
-
-        m = PKT_3DIG_CLOSE.matcher(s);
-        sb = new StringBuffer();
-        while (m.find()) {
-            String hex3 = m.group(1);
-            String hex6 = String.format(
-                    "%c%c%c%c%c%c",
-                    hex3.charAt(0), hex3.charAt(0), hex3.charAt(1), hex3.charAt(1), hex3.charAt(2), hex3.charAt(2));
-            m.appendReplacement(sb, "</#" + hex6 + ">");
-        }
-        m.appendTail(sb);
-
-        return sb.toString();
-    }
 
     public static void sendTabListAdd(Player receiver, FakePlayer fp) {
         if (receiver == null || fp == null) return;
@@ -1451,10 +1396,6 @@ public final class PacketHelper {
             actions.add(Enum.valueOf(enumClass, name));
         } catch (IllegalArgumentException ignored) {
         }
-    }
-
-    private static Object buildEntry(UUID uuid, Object profile, Object displayName) throws Exception {
-        return buildEntryWithLatency(uuid, profile, displayName, 0);
     }
 
     private static Object buildEntryWithLatency(UUID uuid, Object profile, Object displayName, int latency)

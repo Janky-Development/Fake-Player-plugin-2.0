@@ -172,23 +172,9 @@ public final class ConfigMigrator {
         return true;
     }
 
-    public static void forceMigrate(FakePlayerPlugin plugin) {
-        File configFile = new File(plugin.getDataFolder(), "config.yml");
-        if (!configFile.exists()) return;
 
-        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(configFile);
-        cfg.set("config-version", 0);
-        try {
-            cfg.save(configFile);
-        } catch (IOException ignored) {
-        }
 
-        migrateIfNeeded(plugin);
-    }
 
-    public static int getCurrentVersion() {
-        return CURRENT_VERSION;
-    }
 
     private static boolean v1to2(YamlConfiguration cfg) {
         if (cfg.contains("update-checker")) return false;

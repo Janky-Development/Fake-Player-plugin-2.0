@@ -12,7 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.ChunkSnapshot;
 import org.bukkit.FluidCollisionMode;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -34,6 +33,7 @@ import me.bill.fakePlayerPlugin.FakePlayerPlugin;
 import me.bill.fakePlayerPlugin.api.FppBotBlockBreakEvent;
 import me.bill.fakePlayerPlugin.api.impl.FppBotImpl;
 import me.bill.fakePlayerPlugin.config.Config;
+import me.bill.fakePlayerPlugin.fakeplayer.BotClient;
 import me.bill.fakePlayerPlugin.fakeplayer.BotNavUtil;
 import me.bill.fakePlayerPlugin.fakeplayer.BotToolSelector;
 import me.bill.fakePlayerPlugin.fakeplayer.FakePlayer;
@@ -41,17 +41,18 @@ import me.bill.fakePlayerPlugin.fakeplayer.FakePlayerManager;
 import me.bill.fakePlayerPlugin.fakeplayer.NmsPlayerSpawner;
 import me.bill.fakePlayerPlugin.fakeplayer.PathfindingService;
 import me.bill.fakePlayerPlugin.fakeplayer.StorageInteractionHelper;
-import me.bill.fakePlayerPlugin.fakeplayer.pathfinding.PatheticPathfindingController;
+import me.bill.fakePlayerPlugin.fakeplayer.pathfinding.NavController;
+import me.bill.fakePlayerPlugin.fakeplayer.pathfinding.NavTerrain;
+import me.bill.fakePlayerPlugin.mining.MaterialSelector;
+import me.bill.fakePlayerPlugin.mining.OreScanner;
 import me.bill.fakePlayerPlugin.lang.Lang;
 import me.bill.fakePlayerPlugin.permission.Perm;
 import me.bill.fakePlayerPlugin.util.FppScheduler;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.HitResult;
 
 /**
  * /fpp find <bot> <block> [--radius <n>] [--count <n>] [--prefer-visible]
@@ -90,6 +91,9 @@ public final class FindCommand implements FppCommand {
     /** Auto-deposit trip triggers once free main-inventory slots drop to/below this. */
     private static final int LOW_INVENTORY_FREE_SLOTS = 2;
 
+    /** How long a scan's leftover candidates stay trusted before a fresh scan is forced. */
+    private static final long CACHE_TTL_MS = 15_000L;
+
     private final FakePlayerPlugin plugin;
     private final FakePlayerManager manager;
     private final PathfindingService pathfinding;
@@ -120,14 +124,15 @@ public final class FindCommand implements FppCommand {
 
     @Override
     public String getUsage() {
-        return "<bot> <block> [--radius|-r <n>] [--count|-c <n>] [--prefer-visible]  |  <bot> --stop  |  --stop";
+        return "<bot> <block[,block…]|ores|logs|…> [--radius|-r <n>] [--count|-c <n>] [--prefer-visible]"
+                + " [--hazards] [--scan]  |  <bot> --stop  |  --stop";
     }
 
     @Override
     public String getDescription() {
-        return "Path to and mine nearby blocks of a chosen type, auto-equipping the right tool and"
-                + " auto-depositing at registered storage when full. Repeats until --count blocks are"
-                + " mined or no more are found.";
+        return "Find and mine nearby blocks the bot could actually see (exposed faces only - no X-ray),"
+                + " follow veins as they open up, auto-equip the right tool and auto-deposit at registered"
+                + " storage when full. --scan only reports what is visible.";
     }
 
     @Override
@@ -179,23 +184,20 @@ public final class FindCommand implements FppCommand {
             return true;
         }
 
-        // Parse block material
-        String blockArg = args[1].toUpperCase(Locale.ROOT);
-        Material material;
-        try {
-            material = Material.valueOf(blockArg);
-        } catch (IllegalArgumentException e) {
-            sender.sendMessage(Lang.get("find-invalid-block", "block", args[1]));
+        // Parse the block selection: a name, a comma list, or a group alias (ores, logs, …).
+        Set<Material> materials = MaterialSelector.parse(args[1]);
+        if (materials == null) {
+            String bad = MaterialSelector.firstUnknown(args[1]);
+            sender.sendMessage(Lang.get("find-invalid-block", "block", bad != null ? bad : args[1]));
             return true;
         }
-        if (material.isAir() || !material.isBlock()) {
-            sender.sendMessage(Lang.get("find-invalid-block", "block", args[1]));
-            return true;
-        }
+        String label = args[1].toLowerCase(Locale.ROOT).replace('_', ' ');
 
         int radius = DEFAULT_RADIUS;
         int count = -1; // -1 = unlimited
         boolean preferVisible = false;
+        boolean allowHazards = false;
+        boolean scanOnly = false;
 
         for (int i = 2; i < args.length; i++) {
             String flag = args[i].toLowerCase(Locale.ROOT);
@@ -224,7 +226,9 @@ public final class FindCommand implements FppCommand {
                         return true;
                     }
                 }
-                case "--prefer-visible", "--prefervisible" -> preferVisible = true;
+                case "--prefer-visible", "--prefervisible", "--visible" -> preferVisible = true;
+                case "--hazards", "--allow-hazards" -> allowHazards = true;
+                case "--scan" -> scanOnly = true;
                 default -> {
                     // ignore unknown flags gracefully
                 }
@@ -235,7 +239,14 @@ public final class FindCommand implements FppCommand {
         cleanupBot(fp.getUuid());
 
         UUID starterUuid = sender instanceof Player p ? p.getUniqueId() : null;
-        FindJob job = new FindJob(material, radius, count, preferVisible, starterUuid, sender instanceof Player);
+        FindJob job = new FindJob(
+                materials, label, radius, count, preferVisible, starterUuid, sender instanceof Player);
+        job.allowHazards = allowHazards;
+
+        if (scanOnly) {
+            runScan(sender, fp, job);
+            return true;
+        }
         jobs.put(fp.getUuid(), job);
 
         String countDisplay = count < 0 ? "∞" : String.valueOf(count);
@@ -244,7 +255,7 @@ public final class FindCommand implements FppCommand {
                 "name",
                 fp.getDisplayName(),
                 "block",
-                material.name().toLowerCase(Locale.ROOT).replace('_', ' '),
+                label,
                 "radius",
                 String.valueOf(radius),
                 "count",
@@ -255,73 +266,7 @@ public final class FindCommand implements FppCommand {
         return true;
     }
 
-    public boolean startFindTask(CommandSender sender, FakePlayer fp, String[] args) {
-        if (args.length == 0) {
-            sender.sendMessage(Lang.get("find-usage"));
-            return false;
-        }
-        Player bot = fp.getPlayer();
-        if (bot == null || !bot.isOnline()) {
-            sender.sendMessage(Lang.get("find-bot-offline", "name", fp.getDisplayName()));
-            return false;
-        }
-        Material material;
-        try {
-            material = Material.valueOf(args[0].toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            sender.sendMessage(Lang.get("find-invalid-block", "block", args[0]));
-            return false;
-        }
-        if (material.isAir() || !material.isBlock()) {
-            sender.sendMessage(Lang.get("find-invalid-block", "block", args[0]));
-            return false;
-        }
 
-        int radius = DEFAULT_RADIUS;
-        int count = -1;
-        boolean preferVisible = false;
-        int i = 1;
-        if (i < args.length && !args[i].startsWith("-")) {
-            try {
-                count = Math.max(1, Integer.parseInt(args[i++]));
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        for (; i < args.length; i++) {
-            String flag = args[i].toLowerCase(Locale.ROOT);
-            switch (flag) {
-                case "--radius", "-r" -> {
-                    if (i + 1 >= args.length) return false;
-                    try {
-                        radius = Math.min(MAX_RADIUS, Math.max(1, Integer.parseInt(args[++i])));
-                    } catch (NumberFormatException ex) {
-                        sender.sendMessage(Lang.get("find-invalid-radius", "value", args[i]));
-                        return false;
-                    }
-                }
-                case "--count", "-c" -> {
-                    if (i + 1 >= args.length) return false;
-                    try {
-                        count = Math.max(1, Integer.parseInt(args[++i]));
-                    } catch (NumberFormatException ex) {
-                        sender.sendMessage(Lang.get("find-invalid-count", "value", args[i]));
-                        return false;
-                    }
-                }
-                case "--prefer-visible", "--prefervisible" -> preferVisible = true;
-                default -> {}
-            }
-        }
-
-        // Stop any existing find job for this bot before starting a new one. Left/right-click are
-        // independent task systems now and are left running, same as the primary /fpp find entry point.
-        cleanupBot(fp.getUuid());
-        UUID starterUuid = sender instanceof Player p ? p.getUniqueId() : null;
-        FindJob job = new FindJob(material, radius, count, preferVisible, starterUuid, sender instanceof Player);
-        jobs.put(fp.getUuid(), job);
-        findAndMineNext(fp, job);
-        return true;
-    }
 
     @Override
     public List<String> tabComplete(CommandSender sender, String[] args) {
@@ -403,14 +348,158 @@ public final class FindCommand implements FppCommand {
             return;
         }
 
+        // Cheap path: re-use the previous scan's ranked leftovers (plus freshly exposed vein neighbours)
+        // instead of snapshotting every chunk in range after every single block. Each candidate is
+        // re-validated against the live world when picked, so a stale entry just gets dropped.
+        if (!job.cache.isEmpty() && System.currentTimeMillis() - job.lastScanMs < CACHE_TTL_MS) {
+            List<OreScanner.Hit> hits = rescore(origin, job.cache);
+            job.cache.clear();
+            handleFindResult(fp, job, hits);
+            return;
+        }
+
         List<ChunkSnapshot> snapshots = snapshotChunks(world, origin, job.radius);
+        final Set<Long> alreadyMined = new HashSet<>(job.mined);
+        final UUID worldId = world.getUID();
+        job.lastScanMs = System.currentTimeMillis();
         FppScheduler.runAsync(plugin, () -> {
-            BlockTarget found = findNearestBlockAsync(origin, snapshots, job, fp.getUuid());
-            FppScheduler.runAtEntity(plugin, bot, () -> handleFindResult(fp, job, found));
+            List<OreScanner.Hit> hits = scanExposed(origin, snapshots, job, alreadyMined, worldId, fp.getUuid(), 48);
+            FppScheduler.runAtEntity(plugin, bot, () -> handleFindResult(fp, job, hits));
         });
     }
 
-    private void handleFindResult(FakePlayer fp, FindJob job, BlockTarget found) {
+    /** Re-ranks cached hits by their walking effort from where the bot is now. */
+    private static List<OreScanner.Hit> rescore(Location origin, List<OreScanner.Hit> hits) {
+        List<OreScanner.Hit> out = new ArrayList<>(hits.size());
+        for (OreScanner.Hit h : hits) {
+            double dx = h.x() + 0.5 - origin.getX();
+            double dz = h.z() + 0.5 - origin.getZ();
+            double dy = h.y() - origin.getY();
+            double score = Math.sqrt(dx * dx + dz * dz) + OreScanner.VERTICAL_WEIGHT * Math.abs(dy)
+                    + (h.hazard() ? 25 : 0);
+            out.add(new OreScanner.Hit(h.x(), h.y(), h.z(), score, h.hazard()));
+        }
+        return out;
+    }
+
+    /**
+     * A block was just mined: its six neighbours now have an open face. Matching ones become candidates
+     * straight away (the vein keeps opening up) with no rescan.
+     */
+    private void cacheExposedNeighbours(FindJob job, World world, int x, int y, int z) {
+        int[][] faces = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+        for (int[] f : faces) {
+            int nx = x + f[0], ny = y + f[1], nz = z + f[2];
+            if (ny < world.getMinHeight() || ny >= world.getMaxHeight()) continue;
+            if (!world.isChunkLoaded(nx >> 4, nz >> 4)) continue;
+            if (job.mined.contains(packBlockKey(nx, ny, nz))) continue;
+            if (!job.materials.contains(world.getType(nx, ny, nz))) continue;
+            boolean hazard = false;
+            for (int[] g : faces) {
+                if (world.getType(nx + g[0], ny + g[1], nz + g[2]) == Material.LAVA) {
+                    hazard = true;
+                    break;
+                }
+            }
+            if (hazard && !job.allowHazards) continue;
+            boolean dup = false;
+            for (OreScanner.Hit h : job.cache) {
+                if (h.x() == nx && h.y() == ny && h.z() == nz) {
+                    dup = true;
+                    break;
+                }
+            }
+            if (!dup) job.cache.add(new OreScanner.Hit(nx, ny, nz, 0.0, hazard));
+        }
+    }
+
+    /**
+     * Off-thread detection over chunk snapshots: only blocks with an exposed face are reported (see
+     * {@link OreScanner}). Reserved-by-another-bot and already-mined blocks are excluded.
+     */
+    private List<OreScanner.Hit> scanExposed(
+            Location origin,
+            List<ChunkSnapshot> snapshots,
+            FindJob job,
+            Set<Long> alreadyMined,
+            UUID worldId,
+            UUID botUuid,
+            int limit) {
+        World world = origin.getWorld();
+        if (world == null) return List.of();
+        Map<Long, ChunkSnapshot> byChunk = new java.util.HashMap<>();
+        for (ChunkSnapshot s : snapshots) byChunk.put(chunkKey(s.getX(), s.getZ()), s);
+        final int minY = world.getMinHeight();
+        final int maxY = world.getMaxHeight() - 1;
+
+        OreScanner.BlockView view = (x, y, z) -> {
+            if (y < minY || y > maxY) return null;
+            ChunkSnapshot s = byChunk.get(chunkKey(x >> 4, z >> 4));
+            return s == null ? null : s.getBlockType(x & 15, y, z & 15);
+        };
+        return OreScanner.scan(
+                view,
+                origin.getBlockX(),
+                origin.getBlockY(),
+                origin.getBlockZ(),
+                job.radius,
+                minY,
+                maxY,
+                job.materials,
+                t -> {
+                    Material m = (Material) t;
+                    return m.isAir() || !m.isOccluding();
+                },
+                t -> t == Material.LAVA,
+                key -> alreadyMined.contains(key) || isReservedByOther(worldId, key, botUuid),
+                job.allowHazards,
+                limit);
+    }
+
+    private static long chunkKey(int cx, int cz) {
+        return ((long) cx << 32) ^ (cz & 0xFFFFFFFFL);
+    }
+
+    private boolean isReservedByOther(UUID worldId, long key, UUID botUuid) {
+        UUID holder = reservedBlocks.get(worldId + ":" + key);
+        return holder != null && !holder.equals(botUuid);
+    }
+
+    /** {@code --scan}: report what is visible without moving or mining. */
+    private void runScan(CommandSender sender, FakePlayer fp, FindJob job) {
+        Player bot = fp.getPlayer();
+        if (bot == null) return;
+        Location origin = bot.getLocation().clone();
+        World world = origin.getWorld();
+        if (world == null) return;
+        List<ChunkSnapshot> snapshots = snapshotChunks(world, origin, job.radius);
+        FppScheduler.runAsync(plugin, () -> {
+            List<OreScanner.Hit> hits =
+                    scanExposed(origin, snapshots, job, Set.of(), world.getUID(), fp.getUuid(), 100_000);
+            FppScheduler.runAtEntity(plugin, bot, () -> {
+                if (hits.isEmpty()) {
+                    sender.sendMessage(Lang.get(
+                            "find-scan-none", "name", fp.getDisplayName(), "block", job.label,
+                            "radius", String.valueOf(job.radius)));
+                    return;
+                }
+                OreScanner.Hit nearest = hits.get(0);
+                long hazards = hits.stream().filter(OreScanner.Hit::hazard).count();
+                sender.sendMessage(Lang.get(
+                        "find-scan-result",
+                        "name", fp.getDisplayName(),
+                        "count", String.valueOf(hits.size()),
+                        "block", job.label,
+                        "radius", String.valueOf(job.radius),
+                        "x", String.valueOf(nearest.x()),
+                        "y", String.valueOf(nearest.y()),
+                        "z", String.valueOf(nearest.z()),
+                        "hazards", String.valueOf(hazards)));
+            });
+        });
+    }
+
+    private void handleFindResult(FakePlayer fp, FindJob job, List<OreScanner.Hit> hits) {
         if (!jobs.containsKey(fp.getUuid())) return;
 
         Player bot = fp.getPlayer();
@@ -419,8 +508,8 @@ public final class FindCommand implements FppCommand {
             return;
         }
 
-        if (found == null) {
-            // No more blocks found
+        if (hits.isEmpty()) {
+            // Nothing visible left (buried blocks are deliberately not detected).
             cleanupBot(fp.getUuid());
             notifySender(
                     job,
@@ -428,74 +517,149 @@ public final class FindCommand implements FppCommand {
                     "name",
                     fp.getDisplayName(),
                     "block",
-                    job.material.name().toLowerCase(Locale.ROOT).replace('_', ' '),
+                    job.label,
                     "count",
                     String.valueOf(job.minedCount));
             return;
         }
 
-        Block target = bot.getWorld().getBlockAt(found.x(), found.y(), found.z());
-        if (target.getType() != job.material || !isMineable(target)) {
-            releaseReservation(found.key(), fp.getUuid());
-            job.mined.add(found.key());
-            findAndMineNext(fp, job);
+        World world = bot.getWorld();
+
+        // Re-rank on the main thread: keep following the vein we are in, prefer what is in plain sight.
+        List<OreScanner.Hit> ranked = new ArrayList<>(hits);
+        ranked.sort(java.util.Comparator.comparingDouble(h -> adjustedScore(bot, job, h)));
+
+        for (int hi = 0; hi < ranked.size(); hi++) {
+            OreScanner.Hit hit = ranked.get(hi);
+            long key = packBlockKey(hit.x(), hit.y(), hit.z());
+            Block target = world.getBlockAt(hit.x(), hit.y(), hit.z());
+            if (!job.materials.contains(target.getType()) || !isMineable(target)) {
+                job.mined.add(key);
+                continue;
+            }
+            Location standLoc = findStand(bot, target);
+            if (standLoc == null) {
+                job.mined.add(key); // no reachable footing for it - leave it be
+                continue;
+            }
+            String reservation = reservationKey(world, key);
+            UUID existing = reservedBlocks.putIfAbsent(reservation, fp.getUuid());
+            if (existing != null && !existing.equals(fp.getUuid())) continue;
+
+            job.mined.add(key); // mark before nav so it won't be re-targeted during travel
+            job.cache.clear();
+            for (int k = hi + 1; k < ranked.size(); k++) {
+                OreScanner.Hit rest = ranked.get(k);
+                if (!job.mined.contains(packBlockKey(rest.x(), rest.y(), rest.z()))) job.cache.add(rest);
+            }
+            beginApproach(fp, job, target, key, standLoc);
             return;
         }
 
-        job.mined.add(found.key()); // mark before nav so it won't be re-targeted during travel
+        // Every candidate was unusable (all now marked) - rescan; the set is finite so this converges.
+        findAndMineNext(fp, job);
+    }
 
-        // Find a safe stand position adjacent to the target block
-        Location standLoc =
-                BotNavUtil.findStandLocation(bot.getWorld(), null, target.getX(), target.getY(), target.getZ());
-
-        if (standLoc == null) {
-            // Can't stand next to it - skip and try next
-            releaseReservation(found.key(), fp.getUuid());
-            findAndMineNext(fp, job);
-            return;
+    /** Lower is better: scan score, minus a bonus for continuing the vein and for line of sight. */
+    private double adjustedScore(Player bot, FindJob job, OreScanner.Hit h) {
+        double score = h.score();
+        if (job.hasLast) {
+            int dx = h.x() - job.lastX, dy = h.y() - job.lastY, dz = h.z() - job.lastZ;
+            if (dx * dx + dy * dy + dz * dz <= 9) score -= 6.0; // same vein: keep digging it
         }
+        if (job.preferVisible && isBlockVisible(bot, bot.getWorld().getBlockAt(h.x(), h.y(), h.z()))) {
+            score -= 8.0;
+        }
+        return score;
+    }
 
-        Location faceLoc = BotNavUtil.faceToward(standLoc, target.getLocation().add(0.5, 0.5, 0.5));
+    /**
+     * A footing cell for mining {@code target}: standable per the pathfinder's terrain model, within the
+     * bot's real block-interaction range of the block, nearest to the bot. Searches a small cube so a
+     * block in a wall, floor or ceiling gets a sensible approach instead of just the 4 side cells.
+     */
+    private @Nullable Location findStand(Player bot, Block target) {
+        ServerPlayer nms = ((CraftPlayer) bot).getHandle();
+        NavTerrain terrain = new NavTerrain(nms.level());
+        double reach = Math.max(2.0, nms.blockInteractionRange() - 0.5);
+        Location botLoc = bot.getLocation();
 
-        double xzDist = PathfindingService.xzDist(bot.getLocation(), faceLoc);
-
-        if (xzDist <= Config.pathfindingArrivalDistance()) {
-            lockAndMineTarget(fp, job, target, faceLoc);
-        } else {
-            UUID uuid = fp.getUuid();
-            startNavWatchdog(fp, target, () -> {
-                // Stuck too long chasing this block - give up on it and try the next one.
-                if (pathfinding.isNavigating(uuid, PathfindingService.Owner.FIND)) {
-                    pathfinding.cancel(uuid);
+        Location best = null;
+        double bestScore = Double.MAX_VALUE;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                for (int dy = -3; dy <= 1; dy++) {
+                    int x = target.getX() + dx, y = target.getY() + dy, z = target.getZ() + dz;
+                    if (x == target.getX() && z == target.getZ() && y == target.getY()) continue;
+                    if (terrain.stance(x, y, z, false) != NavTerrain.Stance.GROUND) continue;
+                    double ex = x + 0.5 - (target.getX() + 0.5);
+                    double ey = y + 1.62 - (target.getY() + 0.5);
+                    double ez = z + 0.5 - (target.getZ() + 0.5);
+                    double toBlock = Math.sqrt(ex * ex + ey * ey + ez * ez);
+                    if (toBlock > reach) continue;
+                    double toBot = Math.sqrt(
+                            Math.pow(x + 0.5 - botLoc.getX(), 2)
+                                    + Math.pow(y - botLoc.getY(), 2) * 1.5
+                                    + Math.pow(z + 0.5 - botLoc.getZ(), 2));
+                    double score = toBot + toBlock * 0.3;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = new Location(bot.getWorld(), x + 0.5, y, z + 0.5);
+                    }
                 }
-                releaseReservation(found.key(), uuid);
-                findAndMineNext(fp, job);
-            });
-            pathfinding.navigate(
-                    fp,
-                    new PathfindingService.NavigationRequest(
-                            PathfindingService.Owner.FIND,
-                            () -> faceLoc,
-                            Config.pathfindingArrivalDistance(),
-                            0.0,
-                            Integer.MAX_VALUE,
-                            () -> {
-                                cancelNavWatchdog(uuid);
-                                lockAndMineTarget(fp, job, target, faceLoc);
-                            },
-                            () -> {
-                                // Navigation cancelled externally - stop job
-                                cancelNavWatchdog(uuid);
-                                cleanupBot(uuid);
-                            },
-                            () -> {
-                                // Path failed - skip this block and try next
-                                cancelNavWatchdog(uuid);
-                                releaseReservation(found.key(), uuid);
-                                findAndMineNext(fp, job);
-                            },
-                            faceLoc));
+            }
         }
+        if (best != null) {
+            return BotNavUtil.faceToward(best, target.getLocation().add(0.5, 0.5, 0.5));
+        }
+        Location legacy =
+                BotNavUtil.findStandLocation(bot.getWorld(), null, target.getX(), target.getY(), target.getZ());
+        return legacy == null ? null : BotNavUtil.faceToward(legacy, target.getLocation().add(0.5, 0.5, 0.5));
+    }
+
+    /** Walks to {@code faceLoc} (or starts mining at once when already there) for the chosen block. */
+    private void beginApproach(FakePlayer fp, FindJob job, Block target, long key, Location faceLoc) {
+        Player bot = fp.getPlayer();
+        if (bot == null) return;
+        double xzDist = PathfindingService.xzDist(bot.getLocation(), faceLoc);
+        if (xzDist <= Config.pathfindingArrivalDistance()
+                && Math.abs(bot.getLocation().getY() - faceLoc.getY()) < 1.25) {
+            lockAndMineTarget(fp, job, target, faceLoc);
+            return;
+        }
+        UUID uuid = fp.getUuid();
+        startNavWatchdog(fp, target, () -> {
+            // Stuck too long chasing this block - give up on it and try the next one.
+            if (pathfinding.isNavigating(uuid, PathfindingService.Owner.FIND)) {
+                pathfinding.cancel(uuid);
+            }
+            releaseReservation(key, uuid);
+            findAndMineNext(fp, job);
+        });
+        pathfinding.navigate(
+                fp,
+                new PathfindingService.NavigationRequest(
+                        PathfindingService.Owner.FIND,
+                        () -> faceLoc,
+                        Config.pathfindingArrivalDistance(),
+                        0.0,
+                        Integer.MAX_VALUE,
+                        () -> {
+                            cancelNavWatchdog(uuid);
+                            lockAndMineTarget(fp, job, target, faceLoc);
+                        },
+                        () -> {
+                            // Navigation cancelled externally - stop job
+                            cancelNavWatchdog(uuid);
+                            cleanupBot(uuid);
+                        },
+                        () -> {
+                            // Path failed - skip this block and try next
+                            cancelNavWatchdog(uuid);
+                            releaseReservation(key, uuid);
+                            findAndMineNext(fp, job);
+                        },
+                        faceLoc));
     }
 
     /**
@@ -511,7 +675,7 @@ public final class FindCommand implements FppCommand {
         }
 
         // Re-verify the block still exists (someone else may have mined it)
-        if (target.getType() != job.material) {
+        if (!job.materials.contains(target.getType())) {
             releaseReservation(blockKey(target), fp.getUuid());
             findAndMineNext(fp, job);
             return;
@@ -552,7 +716,7 @@ public final class FindCommand implements FppCommand {
         }
 
         BlockPos desiredPos = new BlockPos(target.getX(), target.getY(), target.getZ());
-        BlockPos minePos = resolveMineTarget(bot, desiredPos, job.material);
+        BlockPos minePos = resolveMineTarget(bot, desiredPos, job.materials);
         if (minePos == null) {
             releaseReservation(blockKey(target), fp.getUuid());
             findAndMineNext(fp, job);
@@ -623,6 +787,11 @@ public final class FindCommand implements FppCommand {
 
             if (state.countsTowardGoal) {
                 job.minedCount++;
+                job.hasLast = true;
+                job.lastX = state.desiredPos.getX();
+                job.lastY = state.desiredPos.getY();
+                job.lastZ = state.desiredPos.getZ();
+                cacheExposedNeighbours(job, bot.getWorld(), job.lastX, job.lastY, job.lastZ);
                 releaseReservation(
                         packBlockKey(state.desiredPos.getX(), state.desiredPos.getY(), state.desiredPos.getZ()),
                         fp.getUuid());
@@ -635,7 +804,7 @@ public final class FindCommand implements FppCommand {
                             "name",
                             fp.getDisplayName(),
                             "block",
-                            job.material.name().toLowerCase(Locale.ROOT).replace('_', ' '),
+                            job.label,
                             "count",
                             String.valueOf(job.minedCount));
                     return;
@@ -647,7 +816,7 @@ public final class FindCommand implements FppCommand {
 
             Block desiredBlock = bot.getWorld()
                     .getBlockAt(state.desiredPos.getX(), state.desiredPos.getY(), state.desiredPos.getZ());
-            if (desiredBlock.getType() != job.material) {
+            if (!job.materials.contains(desiredBlock.getType())) {
                 releaseReservation(
                         packBlockKey(state.desiredPos.getX(), state.desiredPos.getY(), state.desiredPos.getZ()),
                         fp.getUuid());
@@ -673,7 +842,7 @@ public final class FindCommand implements FppCommand {
 
         Material currentMaterial = CraftMagicNumbers.getMaterial(blockState.getBlock());
         if (state.countsTowardGoal) {
-            if (currentMaterial != job.material) {
+            if (!job.materials.contains(currentMaterial)) {
                 state.done = true;
                 state.postMinePause = 0;
                 return;
@@ -698,7 +867,7 @@ public final class FindCommand implements FppCommand {
                     + " heldItem=" + held.getType()
                     + " lastProgress=" + state.lastObservedProgress
                     + " ticksSinceProgress=" + state.ticksSinceProgress + "/" + MINE_STALL_TICKS);
-            PatheticPathfindingController.sendDebugChat(fp.getUuid(), fp.getName(), "pathdebug-mine-stall");
+            NavController.sendDebugChat(fp.getUuid(), fp.getName(), "pathdebug-mine-stall");
             state.done = true;
             state.postMinePause = 0;
             return;
@@ -708,90 +877,35 @@ public final class FindCommand implements FppCommand {
             return;
         }
 
-        // Auto-equip the best available tool for this block.
-        BotToolSelector.equipBestTool(bot, targetPos);
+        // The dig itself is the vanilla client's: look at the block, hold the attack key. Tool choice,
+        // break-progress prediction, the START/STOP packets and (in creative) the instant break all come
+        // from BotClient - nothing here sets blocks or skips the server's own checks.
+        BotClient client = BotClient.of(nms);
+        if (!client.isDestroying()) BotToolSelector.equipBestTool(bot, targetPos);
 
-        Direction side = Direction.DOWN;
-
-        if (bot.getGameMode() == GameMode.CREATIVE) {
-            if (fireBlockBreakHook(fp, targetPos)) {
-                NmsPlayerSpawner.handleBlockBreakAction(
-                        nms,
-                        targetPos,
-                        ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
-                        side,
-                        nms.level().getMaxY(),
-                        -1);
-            }
-            nms.swing(InteractionHand.MAIN_HAND);
-            state.done = true;
-            state.postMinePause = POST_MINE_PAUSE_TICKS;
-            return;
-        }
-
-        if (state.currentPos == null || !state.currentPos.equals(targetPos)) {
-            if (state.currentPos != null) {
-                if (fireBlockBreakHook(fp, state.currentPos)) {
-                    NmsPlayerSpawner.handleBlockBreakAction(
-                            nms,
-                            state.currentPos,
-                            ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,
-                            side,
-                            nms.level().getMaxY(),
-                            -1);
-                }
-            }
-            if (fireBlockBreakHook(fp, targetPos)) {
-                NmsPlayerSpawner.handleBlockBreakAction(
-                        nms,
-                        targetPos,
-                        ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
-                        side,
-                        nms.level().getMaxY(),
-                        -1);
-            }
-
-            if (state.progress == 0f) blockState.attack(nms.level(), targetPos, nms);
-
-            float speed = blockState.getDestroyProgress(nms, nms.level(), targetPos);
-            if (speed >= 1.0f) {
-                nms.swing(InteractionHand.MAIN_HAND);
+        if (!state.hookFired) {
+            if (!fireBlockBreakHook(fp, targetPos)) { // an API listener vetoed this block
                 state.done = true;
-                state.postMinePause = POST_MINE_PAUSE_TICKS;
+                state.postMinePause = 0;
                 return;
             }
-            state.currentPos = targetPos;
-            state.progress = 0f;
-            state.lastObservedProgress = 0f;
+            state.hookFired = true;
+        }
+
+        HitResult hit = BotClient.pick(nms);
+        client.holdAttack(nms, hit, POST_MINE_PAUSE_TICKS);
+
+        float progress = client.destroyProgress();
+        if (progress > state.lastObservedProgress + 1e-4f) {
+            state.lastObservedProgress = progress;
             state.ticksSinceProgress = 0;
         } else {
-            float speed = blockState.getDestroyProgress(nms, nms.level(), targetPos);
-            state.progress += speed;
-            if (state.progress > state.lastObservedProgress) {
-                state.lastObservedProgress = state.progress;
-                state.ticksSinceProgress = 0;
-            } else {
-                state.ticksSinceProgress++;
-            }
-            if (state.progress >= 1.0f) {
-                if (fireBlockBreakHook(fp, targetPos)) {
-                    NmsPlayerSpawner.handleBlockBreakAction(
-                            nms,
-                            targetPos,
-                            ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
-                            side,
-                            nms.level().getMaxY(),
-                            -1);
-                }
-                nms.swing(InteractionHand.MAIN_HAND);
-                state.done = true;
-                state.postMinePause = POST_MINE_PAUSE_TICKS;
-                return;
-            }
-            NmsPlayerSpawner.destroyBlockProgress(nms, -1, targetPos, (int) (state.progress * 10));
+            state.ticksSinceProgress++;
         }
-
-        nms.swing(InteractionHand.MAIN_HAND);
+        if (nms.level().getBlockState(targetPos).isAir()) {
+            state.done = true;
+            state.postMinePause = POST_MINE_PAUSE_TICKS;
+        }
         nms.resetLastActionTime();
     }
 
@@ -813,9 +927,9 @@ public final class FindCommand implements FppCommand {
         return !event.isCancelled();
     }
 
-    private BlockPos resolveMineTarget(Player bot, BlockPos desiredPos, Material desiredMaterial) {
+    private BlockPos resolveMineTarget(Player bot, BlockPos desiredPos, Set<Material> desiredMaterials) {
         Block desired = bot.getWorld().getBlockAt(desiredPos.getX(), desiredPos.getY(), desiredPos.getZ());
-        if (desired.getType() != desiredMaterial) return null;
+        if (!desiredMaterials.contains(desired.getType())) return null;
 
         Location eye = bot.getEyeLocation();
         Location targetCenter = desired.getLocation().add(0.5, 0.5, 0.5);
@@ -951,62 +1065,6 @@ public final class FindCommand implements FppCommand {
     //  Block search
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Scan a sphere of {@code radius} blocks around the bot for the nearest block of the given
-     * material. Already-visited block positions (by packed key) are skipped.
-     */
-    private Block findNearestBlock(
-            Player bot, Material material, int radius, Set<Long> visited, boolean preferVisible) {
-        Location origin = bot.getLocation();
-        World world = origin.getWorld();
-        if (world == null) return null;
-
-        int ox = origin.getBlockX();
-        int oy = origin.getBlockY();
-        int oz = origin.getBlockZ();
-        int minY = world.getMinHeight();
-        int maxY = world.getMaxHeight() - 1;
-
-        Block best = null;
-        Block bestVisible = null;
-        double bestDist = Double.MAX_VALUE;
-        double bestVisibleDist = Double.MAX_VALUE;
-        double radiusSq = (double) radius * radius;
-
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                for (int dy = -radius; dy <= radius; dy++) {
-                    int x = ox + dx;
-                    int y = oy + dy;
-                    int z = oz + dz;
-                    if (y < minY || y > maxY) continue;
-                    double distSq = dx * (double) dx + dy * (double) dy + dz * (double) dz;
-                    if (distSq > radiusSq) continue;
-                    if (visited.contains(packBlockKey(x, y, z))) continue;
-
-                    Block block = world.getBlockAt(x, y, z);
-                    if (block.getType() != material) continue;
-                    if (!isMineable(block)) continue;
-
-                    if (preferVisible && isBlockVisible(bot, block)) {
-                        if (distSq < bestVisibleDist) {
-                            bestVisibleDist = distSq;
-                            bestVisible = block;
-                        }
-                        continue;
-                    }
-
-                    if (distSq < bestDist) {
-                        bestDist = distSq;
-                        best = block;
-                    }
-                }
-            }
-        }
-        if (preferVisible && bestVisible != null) return bestVisible;
-        return best;
-    }
-
     private List<ChunkSnapshot> snapshotChunks(World world, Location origin, int radius) {
         int minChunkX = (origin.getBlockX() - radius) >> 4;
         int maxChunkX = (origin.getBlockX() + radius) >> 4;
@@ -1020,50 +1078,6 @@ public final class FindCommand implements FppCommand {
             }
         }
         return out;
-    }
-
-    private BlockTarget findNearestBlockAsync(
-            Location origin, List<ChunkSnapshot> snapshots, FindJob job, UUID botUuid) {
-        World world = origin.getWorld();
-        if (world == null) return null;
-        int ox = origin.getBlockX();
-        int oy = origin.getBlockY();
-        int oz = origin.getBlockZ();
-        int minY = world.getMinHeight();
-        int maxY = world.getMaxHeight() - 1;
-        int radius = job.radius;
-        double radiusSq = (double) radius * radius;
-
-        BlockTarget best = null;
-        double bestDist = Double.MAX_VALUE;
-        for (ChunkSnapshot snapshot : snapshots) {
-            int baseX = snapshot.getX() << 4;
-            int baseZ = snapshot.getZ() << 4;
-            for (int lx = 0; lx < 16; lx++) {
-                int x = baseX + lx;
-                int dx = x - ox;
-                if (Math.abs(dx) > radius) continue;
-                for (int lz = 0; lz < 16; lz++) {
-                    int z = baseZ + lz;
-                    int dz = z - oz;
-                    if (Math.abs(dz) > radius) continue;
-                    for (int y = Math.max(minY, oy - radius); y <= Math.min(maxY, oy + radius); y++) {
-                        int dy = y - oy;
-                        double distSq = dx * (double) dx + dy * (double) dy + dz * (double) dz;
-                        if (distSq > radiusSq || distSq >= bestDist) continue;
-                        long key = packBlockKey(x, y, z);
-                        if (job.mined.contains(key) || reservedBlocks.containsKey(reservationKey(world, key))) continue;
-                        if (snapshot.getBlockType(lx, y, lz) != job.material) continue;
-                        best = new BlockTarget(world.getUID(), x, y, z, key);
-                        bestDist = distSq;
-                    }
-                }
-            }
-        }
-        if (best == null) return null;
-        String reservation = reservationKey(world, best.key());
-        UUID existing = reservedBlocks.putIfAbsent(reservation, botUuid);
-        return existing == null || existing.equals(botUuid) ? best : null;
     }
 
     private boolean isBlockVisible(Player bot, Block block) {
@@ -1121,6 +1135,8 @@ public final class FindCommand implements FppCommand {
         if (fp != null) {
             Player bot = fp.getPlayer();
             if (bot != null && bot.isOnline()) {
+                ServerPlayer nmsBot = ((CraftPlayer) bot).getHandle();
+                BotClient.of(nmsBot).stopDestroyBlock(nmsBot); // never leave a ghost dig behind
                 NmsPlayerSpawner.setMovementForward(bot, 0f);
                 bot.setSprinting(false);
             }
@@ -1164,7 +1180,7 @@ public final class FindCommand implements FppCommand {
                             + " elapsedTicks=" + NAV_WATCHDOG_TICKS
                             + " pos=" + (botLoc != null ? formatLoc(botLoc) : "offline")
                             + " target=" + (targetBlock != null ? formatBlock(targetBlock) : "n/a"));
-                    PatheticPathfindingController.sendDebugChat(uuid, fp.getName(), "pathdebug-watchdog");
+                    NavController.sendDebugChat(uuid, fp.getName(), "pathdebug-watchdog");
                     onStuck.run();
                 },
                 NAV_WATCHDOG_TICKS);
@@ -1248,14 +1264,13 @@ public final class FindCommand implements FppCommand {
         return arg.equalsIgnoreCase("--stop");
     }
 
-    private record BlockTarget(UUID worldId, int x, int y, int z, long key) {}
-
     // ─────────────────────────────────────────────────────────────────────────────
     //  Inner types
     // ─────────────────────────────────────────────────────────────────────────────
 
     private static final class FindJob {
-        final Material material;
+        final Set<Material> materials;
+        final String label;
         final int radius;
         final int count; // -1 = unlimited
         final boolean preferVisible;
@@ -1272,14 +1287,29 @@ public final class FindCommand implements FppCommand {
         /** Skips the next inventory-full check - set right after a deposit trip finishes. */
         boolean skipInventoryCheckOnce = false;
 
+        /** Also go for blocks touching lava (off by default). */
+        boolean allowHazards = false;
+
+        /** The block mined last, so the next pick can continue the same vein. */
+        boolean hasLast = false;
+
+        int lastX, lastY, lastZ;
+
+        /** Ranked candidates left over from the last scan plus newly exposed vein neighbours. */
+        final List<OreScanner.Hit> cache = new ArrayList<>();
+
+        long lastScanMs;
+
         FindJob(
-                Material material,
+                Set<Material> materials,
+                String label,
                 int radius,
                 int count,
                 boolean preferVisible,
                 UUID starterUuid,
                 boolean playerStarted) {
-            this.material = material;
+            this.materials = materials;
+            this.label = label;
             this.radius = radius;
             this.count = count;
             this.preferVisible = preferVisible;
@@ -1300,6 +1330,7 @@ public final class FindCommand implements FppCommand {
         int postMinePause;
         float lastObservedProgress;
         int ticksSinceProgress;
+        boolean hookFired;
 
         SimpleMiningState(BlockPos targetPos, BlockPos desiredPos, Location lockLoc, boolean countsTowardGoal) {
             this.targetPos = targetPos;

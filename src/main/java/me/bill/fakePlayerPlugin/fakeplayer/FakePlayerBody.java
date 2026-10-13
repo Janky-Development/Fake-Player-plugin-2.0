@@ -9,7 +9,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
-import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
@@ -711,26 +710,7 @@ public final class FakePlayerBody {
         }
     }
 
-    public static void removeOrphanedNametags(String reason) {
-        FakePlayerPlugin plugin = FakePlayerPlugin.getInstance();
-        if (plugin == null || FakePlayerManager.FAKE_PLAYER_KEY == null) return;
-        FakePlayerManager mgr = plugin.getFakePlayerManager();
-        String prefix = NAMETAG_PDC_VALUE + ":";
-        for (World world : Bukkit.getWorlds()) {
-            for (TextDisplay td : world.getEntitiesByClass(TextDisplay.class)) {
-                String tag = td.getPersistentDataContainer()
-                        .get(FakePlayerManager.FAKE_PLAYER_KEY, PersistentDataType.STRING);
-                if (tag == null || !tag.startsWith(prefix)) continue;
-                String botName = tag.substring(prefix.length());
-                if (mgr == null || mgr.getByName(botName) == null) {
-                    try {
-                        td.remove();
-                    } catch (Throwable ignored) {
-                    }
-                }
-            }
-        }
-    }
 
-    public static void removeOrphanedBodies(String reason) {}
+
+
 }

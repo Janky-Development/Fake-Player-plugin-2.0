@@ -62,6 +62,11 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         }
     }
 
+    /** Looks a registered sub-command up by name or alias (case-insensitive); null if unknown. */
+    public FppCommand getCommand(String nameOrAlias) {
+        return nameOrAlias == null ? null : byName.get(nameOrAlias.toLowerCase());
+    }
+
     public List<FppCommand> getCommands() {
         return Collections.unmodifiableList(commands);
     }
@@ -139,6 +144,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                         "move",
                         "mine",
                         "find",
+                        "clear",
                         "place",
                         "use",
                         "attack",

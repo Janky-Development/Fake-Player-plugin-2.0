@@ -131,6 +131,27 @@ public final class Perm {
     /** This player's/bot's rentals never expire from time running out. */
     public static final String RENT_UNLIMITED = "fpp.rent.unlimited";
 
+    /** {@code /fpp clear}: layer-by-layer excavation of a chunk or area. */
+    public static final String CLEAR = "fpp.clear";
+
+    /** Rent without being charged (no economy needed); counts toward the rented-bot limit. */
+    public static final String RENT_FREE = "fpp.rent.free";
+
+    /** Turn on auto-renew for a rented bot. */
+    public static final String RENT_AUTO = "fpp.rent.auto";
+
+    /** List every rental on the server and act on other players' rented bots. */
+    public static final String RENT_ADMIN = "fpp.rent.admin";
+
+    /** {@code fpp.rent.discount.<1-100>} - percent off rental prices (best node wins). */
+    public static final String RENT_DISCOUNT_PREFIX = "fpp.rent.discount.";
+
+    /** {@code fpp.rent.limit.<1-50>} - max simultaneously rented bots (best node wins). */
+    public static final String RENT_LIMIT_PREFIX = "fpp.rent.limit.";
+
+    /** Spawn without paying {@code economy.spawn.price}. */
+    public static final String SPAWN_FREE = "fpp.spawn.free";
+
     public static boolean has(CommandSender sender, String permission) {
         return sender.hasPermission(permission);
     }
@@ -144,6 +165,24 @@ public final class Perm {
             if (sender.hasPermission(perm)) return true;
         }
         return false;
+    }
+
+    /** Best {@code fpp.rent.discount.<n>} the sender holds, as a percentage 0-100. */
+    public static double resolveRentDiscount(CommandSender sender) {
+        double best = 0;
+        for (int i = 1; i <= 100; i++) {
+            if (sender.hasPermission(RENT_DISCOUNT_PREFIX + i)) best = i;
+        }
+        return best;
+    }
+
+    /** Best {@code fpp.rent.limit.<n>} the sender holds, or -1 when none (use the config default). */
+    public static int resolveRentLimit(CommandSender sender) {
+        int best = -1;
+        for (int i = 1; i <= 50; i++) {
+            if (sender.hasPermission(RENT_LIMIT_PREFIX + i)) best = i;
+        }
+        return best;
     }
 
     public static int resolveUserBotLimit(CommandSender sender) {

@@ -11,7 +11,6 @@ import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
-import me.bill.fakePlayerPlugin.config.Config;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -69,16 +68,24 @@ public final class BotNavUtil {
         return loc;
     }
 
-    public static boolean isAtActionLocation(@Nullable Player bot, @Nullable Location loc) {
-        if (bot == null || loc == null || bot.getWorld() != loc.getWorld()) return false;
-        double xz = PathfindingService.xzDist(bot.getLocation(), loc);
-        double dy = Math.abs(bot.getLocation().getY() - loc.getY());
-        return xz <= Config.pathfindingArrivalDistance() && dy < 1.25;
-    }
 
+
+    /**
+     * True when a bot can stand with its feet in {@code (x,y,z)} - decided by the pathfinder's own
+     * collision-shape terrain model, so stand-location searches and routing always agree.
+     */
     public static boolean walkable(World world, int x, int y, int z) {
         if (y <= world.getMinHeight() || y >= world.getMaxHeight() - 1) return false;
-        return canStandOn(world, x, y - 1, z) && canPassThrough(world, x, y, z) && canPassThrough(world, x, y + 1, z);
+        try {
+            var level = ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
+            var terrain = new me.bill.fakePlayerPlugin.fakeplayer.pathfinding.NavTerrain(level);
+            return terrain.stance(x, y, z, false)
+                    == me.bill.fakePlayerPlugin.fakeplayer.pathfinding.NavTerrain.Stance.GROUND;
+        } catch (Throwable t) {
+            return canStandOn(world, x, y - 1, z)
+                    && canPassThrough(world, x, y, z)
+                    && canPassThrough(world, x, y + 1, z);
+        }
     }
 
     public static boolean canPassThrough(World world, int x, int y, int z) {

@@ -1,5 +1,5 @@
 name: FakePlayerPlugin
-version: '2.1.0'
+version: '2.1.5'
 main: me.bill.fakePlayerPlugin.FakePlayerPlugin
 api-version: '1.21'
 folia-supported: true
@@ -115,6 +115,7 @@ permissions:
       fpp.useitem.stop:         true
       fpp.attack:               true
       fpp.find:                 true
+      fpp.clear:                true
       fpp.stop:                 true
       fpp.notify:               true
       fpp.use:                  true
@@ -122,6 +123,15 @@ permissions:
       fpp.rent.info:            true
       fpp.rent.give:            true
       fpp.rent.unlimited:       true
+      fpp.rent.free:
+    description: >
+      Rent and extend without being charged (works with no economy plugin).
+      Still counts toward rental limits. Spawn price is waived by fpp.spawn.free.
+    default: op
+
+  fpp.rent.auto:            true
+      fpp.rent.admin:           true
+      fpp.spawn.free:           true
       fpp.auth:                 true
 
   fpp.use:
@@ -143,6 +153,7 @@ permissions:
       fpp.right-click.stop:     true
       fpp.rent:                 true
       fpp.rent.info:            true
+      fpp.rent.auto:            true
 
   # ════════════════════════════════════════════════════════════════════════════
   #  VISIBILITY
@@ -512,6 +523,13 @@ permissions:
   #  FIND
   # ════════════════════════════════════════════════════════════════════════════
 
+  fpp.clear:
+    description: >
+      /fpp clear - make a bot excavate a chunk or area layer by layer on its own
+      (digs, seals fluids, deposits loot, builds up when stuck). Destructive:
+      default op.
+    default: op
+
   fpp.find:
     description: >
       Search for nearby blocks of a chosen type and mine them one by one.
@@ -604,3 +622,53 @@ permissions:
   fpp.rent.unlimited:
     description: This player's rented bots never expire from time running out.
     default: op
+
+  fpp.rent.free:
+    description: >
+      Rent and extend without being charged (also waives economy.spawn.price
+      is NOT included - see fpp.spawn.free). Still counts toward rental limits.
+    default: op
+
+  fpp.rent.auto:
+    description: Turn on auto-renew for a rented bot (/fpp rent auto). Included in fpp.use.
+    default: true
+
+  fpp.rent.admin:
+    description: >
+      List every rental on the server (/fpp rent list) and extend/auto-renew
+      other players' rented bots.
+    default: op
+
+  fpp.spawn.free:
+    description: Spawn without paying economy.spawn.price (user tier only; admins never pay).
+    default: op
+
+  # Percent off rental prices. Grant the highest tier a group deserves, e.g.
+  # /lp group vip permission set fpp.rent.discount.25 true. Best node wins; it
+  # does not stack with the bulk-discount tiers (the larger of the two applies).
+  fpp.rent.discount.10:
+    description: 10% off rental prices.
+    default: false
+  fpp.rent.discount.25:
+    description: 25% off rental prices.
+    default: false
+  fpp.rent.discount.50:
+    description: 50% off rental prices.
+    default: false
+  fpp.rent.discount.75:
+    description: 75% off rental prices.
+    default: false
+
+  # Max simultaneously rented bots (overrides economy.rental.max-bots-per-player).
+  fpp.rent.limit.1:
+    description: May hold 1 rented bot.
+    default: false
+  fpp.rent.limit.3:
+    description: May hold 3 rented bots.
+    default: false
+  fpp.rent.limit.5:
+    description: May hold 5 rented bots.
+    default: false
+  fpp.rent.limit.10:
+    description: May hold 10 rented bots.
+    default: false

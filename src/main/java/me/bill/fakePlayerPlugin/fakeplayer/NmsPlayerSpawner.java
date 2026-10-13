@@ -716,22 +716,6 @@ public final class NmsPlayerSpawner {
         }
     }
 
-    /**
-     * Tops up the bot's attack-strength ticker so its next attack lands at full strength. Bots aren't
-     * driven by the normal player tick path that advances the ticker, so without this every hit is
-     * scaled to the ~20% "spam-click" minimum (a sword deals ~1 damage). Callers are responsible for
-     * pacing attacks at the real weapon cooldown.
-     */
-    public static void primeAttackStrength(Player bot) {
-        if (!initialized || attackStrengthTickerField == null || craftPlayerGetHandleMethod == null) return;
-        try {
-            ServerPlayer nmsBot = ((CraftPlayer) bot).getHandle();
-            attackStrengthTickerField.set(nmsBot, 999);
-        } catch (Exception e) {
-            FppLogger.debug("NmsPlayerSpawner.primeAttackStrength failed: " + e.getMessage());
-        }
-    }
-
     public static void performAttack(Player bot, org.bukkit.entity.Entity target, double damage) {
         if (!initialized || craftPlayerGetHandleMethod == null) {
 
@@ -1471,6 +1455,12 @@ public final class NmsPlayerSpawner {
     }
 
     private static Object getClientInformation() {
+        // The bot reports its options like a real client's options menu (render distance, skin layers…).
+        try {
+            return BotClientOptions.initial();
+        } catch (Throwable t) {
+            FppLogger.debug("NmsPlayerSpawner: BotClientOptions.initial failed: " + t.getMessage());
+        }
         if (clientInfoDefault != null) return clientInfoDefault;
         if (clientInformationClass == null) return null;
         try {

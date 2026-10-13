@@ -17,19 +17,24 @@ identity.
 ## Features
 
 - 💰 **Bot rental economy** - pay real currency (Vault, "Vault2.0", or ExcellentEconomy) for a bot
-  and hours of runtime via `/fpp rent buy`/`extend`; auto-despawns the instant paid time runs out.
+  and hours of runtime via `/fpp rent` (built-in shop GUI, packages, auto-renew, discounts) or
+  `/fpp rent buy`/`extend`; auto-despawns the instant paid time runs out.
   `/fpp rent give` needs no economy plugin at all - a zero-integration entry point for wiring up
   your own shop plugin instead. Off by default; see [Economy](frontend/wiki/Economy.md)
 - 🧵 **Multitasking** - `move`, `find`, `left-click`, `right-click`, `attack`, and PVE auto-combat can
   all run at once on the same bot instead of one cancelling the others; movement (the one true
   single-body limit) is arbitrated by priority instead of by hijacking
-- 🧭 **Real pathfinding engine** - [Pathetic](https://github.com/bsommerfeld/pathetic)-backed A*
-  navigation with parkour, block-breaking, bridging, stuck detection with a hard give-up budget,
-  pre-flight path verification, and a Baritone-style particle debug view
-- 🗡️ **PVE combat** - per-bot smart attack with mob-type selection, detect range, target priority,
-  real weapon-cooldown pacing, and pathfinding-linked chasing; always active alongside other tasks
-- ⛏️ **Find automation** - `/fpp find` search → path → mine loops with tool auto-equip, anti-stuck
-  watchdogs, and inventory-aware deposits into registered storages
+- 🧭 **Real pathfinding engine** - in-house tick-costed A* over real collision shapes: climbing, swimming,
+  doors, parkour, tool-aware block breaking, bridging and pillar-up, partial routes, stuck recovery, and
+  a Baritone-style particle debug view
+- 🗡️ **PVE combat** - `/fpp attack` guard (AFK mob farm) or hunter mode with mob-type selection, range,
+  priority, best-weapon pick, real attack-charge pacing and return-to-post
+- ⛏️ **Find & clear automation** - `/fpp find` mines only what the bot can actually see (no X-ray) and
+  follows veins; `/fpp clear` excavates a chunk/area layer by layer on its own - sealing fluids,
+  depositing loot and building up when stuck
+- 🚀 **Spawn actions** - `/fpp spawn --name Guard attack --chase`: bots start working the moment they're online
+- 🗺️ **Client-authentic** - clicks, attacks, digging and chunk loading all go through the same logic and
+  packets a real client uses; the plugin controls the bot, not the server
 - 🎯 **Precise, configurable clicking** - `/fpp left-click` / `/fpp right-click` aim at the **exact
   point** you're looking at, walk to a reachable vantage (preferring your own standing spot) when
   the target is out of reach, and only trigger a button/lever when actually aimed at its hit box;

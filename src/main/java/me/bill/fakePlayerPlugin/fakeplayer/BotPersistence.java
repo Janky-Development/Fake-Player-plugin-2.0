@@ -102,9 +102,7 @@ public final class BotPersistence {
         save(snapshot);
     }
 
-    public void saveAsync(Iterable<FakePlayer> players) {
-        saveActiveListAsync(players);
-    }
+
 
     public void saveFullAsync(Iterable<FakePlayer> players) {
         if (!asyncSaveQueued.compareAndSet(false, true)) return;

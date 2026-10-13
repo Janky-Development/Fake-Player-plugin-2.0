@@ -102,6 +102,9 @@ All identifiers are prefixed with `%fpp_`.
 | `%fpp_user_deaths%` | Total deaths of player's bots |
 | `%fpp_user_count_<world>%` | Player's bot count in a specific world |
 | `%fpp_rental_count%` | Number of the player's currently rented (paid) bots |
+| `%fpp_rent_package_<id>_price%` / `_hours` / `_label` / `_discount` | Configured rental package price (for this player), length, label, discount % |
+| `%fpp_rent_price_<hours>%` / `%fpp_rent_price_new_<hours>%` | Price to extend / to rent a new bot for N hours (player's discounts applied) |
+| `%fpp_rent_balance%` / `%fpp_rent_discount%` / `%fpp_rent_limit%` / `%fpp_rent_slots_left%` / `%fpp_rental_autorenew%` | Economy balance, discount %, rented-bot limit, free rental slots, auto-renew state |
 | `%fpp_rental_remaining%` | Time left on the player's soonest-expiring rented bot (e.g. `3h 20m`), empty if none |
 
 ## Per-Bot (22 placeholders)

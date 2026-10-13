@@ -22,14 +22,96 @@ auto-despawns the moment its paid time runs out. Disabled by default.
 
 | Command | Description | Permission |
 |---------|-------------|------------|
+| `/fpp rent [gui]` | Open the rent shop GUI | `fpp.rent` / `fpp.rent.info` |
+| `/fpp rent packages` | List configured packages with your price | `fpp.rent` |
+| `/fpp rent package <id> [bot] [--for <player>]` | Buy a package (new bot, or extend `bot`); `--for` charges another online player - shop-plugin entry point | `fpp.rent` / `fpp.rent.give` |
 | `/fpp rent buy <hours>` | Spawn a new rented bot for `<hours>` hours, charging your balance | `fpp.rent` |
-| `/fpp rent extend <bot> <hours>` | Add `<hours>` more hours to a bot you own, charging your balance | `fpp.rent` |
+| `/fpp rent extend <bot> <hours>` | Add `<hours>` more hours to a rented bot you own, charging your balance | `fpp.rent` |
+| `/fpp rent quote <hours> [--new]` | Show exactly what a purchase would cost you (slot fee, hourly rate, discount) | `fpp.rent` |
 | `/fpp rent info [bot]` | Show remaining time (all your rented bots, or one) | `fpp.rent.info` |
+| `/fpp rent auto <bot> <on [hours]\|off>` | Renew a rented bot automatically shortly before it expires | `fpp.rent.auto` |
+| `/fpp rent list [player]` | List your rentals (admins: every rental on the server, or one player's) | `fpp.rent.info` / `fpp.rent.admin` |
 | `/fpp rent give <player> <bot\|--new> <hours>` | Grant hours without charging - admin/console/shop-plugin entry point | `fpp.rent.give` |
 | `/fpp rent clear <bot>` | Remove a bot's rental - it becomes permanent again | `fpp.rent.give` |
 
-`fpp.rent` and `fpp.rent.info` are included in `fpp.use` (the default everyone-tier permission) - any
-player can attempt a purchase, gated purely by actually having the money and `economy.enabled: true`.
+`fpp.rent`, `fpp.rent.info` and `fpp.rent.auto` are included in `fpp.use` (the default everyone-tier
+permission) - any player can attempt a purchase, gated purely by actually having the money and
+`economy.enabled: true`.
+
+## Rent GUI
+
+`/fpp rent` (or `/fpp rent gui`, or the **rent a bot** card in `/fpp menu`) opens the built-in shop:
+
+- **Shop** - every package from `economy.rental.packages`, priced for *you* (slot fee, hourly rate, bulk and
+  permission discounts applied). Click once to arm, click again to confirm.
+- **My rentals** - your rented bots with time left and auto-renew state. Click one to manage it.
+- **Bot page** - the same packages as extensions, plus the **auto-renew** switch.
+- The account card shows your balance, rented-bot count/limit and discount. Disable with
+  `economy.rental.gui.enabled: false` (the command then prints usage instead).
+
+## Using other shop GUIs
+
+Any GUI plugin (DeluxeMenus, ChestCommands, ShopGUIPlus, EconomyShopGUI, TrMenu, a Skript menu, …) can sell
+rentals - FPP exposes four neutral integration points, none tied to a specific plugin:
+
+1. **Package command** - define offers once under `economy.rental.packages`, then point a menu item at
+   `fpp rent package <id>` (run as the player) or `fpp rent package <id> --for %player_name%` (run as
+   console, needs `fpp.rent.give`). Add a bot name to extend instead of renting a new bot:
+   `fpp rent package day MyBot`. FPP charges through your economy and applies discounts/limits itself.
+2. **Let the shop plugin charge** - use `fpp rent give %player% --new 24` as the reward command (see below).
+3. **Placeholders** for menu item text (PlaceholderAPI): `%fpp_rent_package_<id>_price%`, `_hours`, `_label`,
+   `_discount`; `%fpp_rent_price_<hours>%` (extend), `%fpp_rent_price_new_<hours>%`; `%fpp_rent_balance%`,
+   `%fpp_rent_discount%`, `%fpp_rent_limit%`, `%fpp_rent_slots_left%`, `%fpp_rental_autorenew%`.
+4. **Event for plugins** - `FppRentalPurchaseEvent` fires before every charge (`command`, `gui`, `package`)
+   with the buyer, type (`NEW`/`EXTEND`), bot, hours, price and source. Cancel it or `setPrice()` to apply
+   your own sale, currency check or surcharge.
+
+`/fpp rent packages` lists the offers with your personal price.
+
+## Pricing
+
+One price engine ([`RentalPricing`]) quotes and charges everywhere (command, GUI, auto-renew):
+
+```
+total = (slot fee [new bots only] + price-per-hour × hours) × (1 − discount%)
+discount% = max(bulk tier reached, fpp.rent.discount.<n>)      # they do not stack
+```
+
+- **Bulk tiers** - `economy.rental.bulk-discounts: {6: 5, 24: 15, 72: 25}`: rent at least *hours* for *percent* off.
+- **Permission discounts** - `fpp.rent.discount.<1-100>` (e.g. `/lp group vip permission set fpp.rent.discount.25 true`); the highest node held applies.
+- **Free** - `fpp.rent.free` pays nothing (and needs no economy plugin), but still counts toward the rented-bot limit.
+- Prices are rounded to cents; a zero total never contacts the economy backend.
+
+Use `/fpp rent quote 24 --new` to preview a purchase.
+
+## Limits & permissions
+
+| Node | Effect | Default |
+|------|--------|---------|
+| `fpp.rent` | buy / extend / quote | everyone |
+| `fpp.rent.info` | `info`, own `list` | everyone |
+| `fpp.rent.auto` | `auto` renew | everyone |
+| `fpp.rent.give` | `give` / `clear` (shop-plugin entry point) | op |
+| `fpp.rent.admin` | `list` everything, act on others' rentals | op |
+| `fpp.rent.free` | no charge | op |
+| `fpp.rent.unlimited` | rentals never expire / ignore the cap | op |
+| `fpp.rent.discount.<n>` | n% off (best wins) | none |
+| `fpp.rent.limit.<n>` | max concurrently rented bots (overrides `max-bots-per-player`) | none |
+| `fpp.spawn.free` | waive `economy.spawn.price` | op |
+
+## Auto-renew
+
+`/fpp rent auto <bot> on [hours]` makes the bot renew `economy.rental.auto-renew-lead-minutes`
+(default 2) before it expires, charging the owner (works while they are offline with Vault) at their
+normal price including discounts. If they cannot pay, auto-renew is switched off and the bot expires
+normally; the owner is told either way. The choice is stored in the database and survives restarts.
+
+## Expiry grace & spawn price
+
+- `economy.rental.expiry-grace-seconds` keeps an expired bot for a short window so its owner can still extend.
+- `economy.spawn.price` charges user-tier `/fpp spawn` (also per bot with `--count`); failed spawns are refunded
+  automatically. Admins and `fpp.spawn.free` never pay.
+- `economy.log-transactions: true` logs every charge/refund at INFO for an audit trail.
 
 ## Setup
 
@@ -47,7 +129,14 @@ economy:
     max-banked-hours: 168       # hard cap on time a bot can have banked across extensions
     warn-minutes-before-expiry: 10
     sweep-interval-seconds: 30
-    max-bots-per-player: 3      # rented bots only; fpp.rent.unlimited bypasses this
+    max-bots-per-player: 3      # rented bots only; fpp.rent.limit.<n> overrides, fpp.rent.unlimited bypasses
+    expiry-grace-seconds: 0
+    bulk-discounts: {6: 5, 24: 15, 72: 25}
+    auto-renew-lead-minutes: 2
+    auto-renew-hours: 1
+  spawn:
+    price: 0.0                  # user-tier /fpp spawn price
+  log-transactions: false
 ```
 
 `economy.enabled: false` (the default) only disables the self-service `buy`/`extend` purchase path -

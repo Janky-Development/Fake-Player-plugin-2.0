@@ -12,7 +12,5 @@ public record RemoteBotEntry(
         String skinSignature,
         int ping) {
 
-    public boolean hasSkin() {
-        return skinValue != null && !skinValue.isBlank();
-    }
+
 }

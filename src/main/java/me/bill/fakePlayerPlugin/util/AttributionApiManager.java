@@ -74,9 +74,7 @@ public final class AttributionApiManager {
         });
     }
 
-    public static boolean isApiReachable() {
-        return apiReachable;
-    }
+
 
     public static boolean hasData() {
         return apiFetched && apiData != null;

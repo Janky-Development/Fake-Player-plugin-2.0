@@ -1,7 +1,6 @@
 package me.bill.fakePlayerPlugin.util;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -34,10 +33,7 @@ public final class FlagParser {
         return this;
     }
 
-    public FlagParser conflicts(String... flags) {
-        conflictGroups.add(Arrays.stream(flags).map(String::toLowerCase).toArray(String[]::new));
-        return this;
-    }
+
 
     public FlagParser parse() {
         Set<String> seen = new LinkedHashSet<>();
@@ -148,10 +144,7 @@ public final class FlagParser {
         return Collections.unmodifiableList(positionals);
     }
 
-    public int positionalCount() {
-        assertParsed();
-        return positionals.size();
-    }
+
 
     private void assertParsed() {
         if (!parsed) throw new IllegalStateException("FlagParser.parse() not yet called");

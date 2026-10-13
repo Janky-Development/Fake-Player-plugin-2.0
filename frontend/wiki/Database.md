@@ -65,6 +65,7 @@ database:
 ### Core Tables (All Modes)
 - `fpp_sessions` - Bot spawn/death session history
 - `fpp_bot_data` - Persistent bot settings (XP, inventory, tasks)
+- `fpp_rental_auto` - per-bot rental auto-renew choice (hours), survives restarts
 - `fpp_skin_cache` - legacy skin cache (dormant - skins are now cached in `data/skin-cache.yml`)
 
 ### Network Tables (NETWORK Mode Only)

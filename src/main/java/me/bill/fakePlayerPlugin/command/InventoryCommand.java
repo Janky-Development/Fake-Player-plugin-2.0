@@ -56,7 +56,6 @@ public class InventoryCommand implements FppCommand, Listener {
     private static final TextColor ACCENT = TextColor.fromHexString("#A78BFA");
     private static final TextColor DARK_GRAY = TextColor.fromHexString("#5F5B73");
     private static final TextColor GRAY = TextColor.fromHexString("#9691AB");
-    private static final TextColor WHITE = TextColor.fromHexString("#EEECF7");
     private static final TextColor OFF_RED = TextColor.fromHexString("#FF6A5C");
     private static final TextColor VAL_YELLOW = TextColor.fromHexString("#BAFF4F");
 
@@ -352,24 +351,7 @@ public class InventoryCommand implements FppCommand, Listener {
         });
     }
 
-    public void refreshOpenGui(UUID botUuid) {
-        FppScheduler.runSync(plugin, () -> {
-            FakePlayer fp = manager.getByUuid(botUuid);
-            if (fp == null || fp.getPlayer() == null || fp.isBodyless()) return;
-            PlayerInventory botInv = fp.getPlayer().getInventory();
-            for (Map.Entry<Inventory, UUID> entry : new HashMap<>(invToBot).entrySet()) {
-                if (!botUuid.equals(entry.getValue())) continue;
-                Inventory gui = entry.getKey();
-                for (int guiSlot = 0; guiSlot < GUI_SIZE; guiSlot++) {
-                    if (DECO.contains(guiSlot)) continue;
-                    int botSlot = GUI_TO_BOT[guiSlot];
-                    if (botSlot < 0) continue;
-                    ItemStack item = botInv.getItem(botSlot);
-                    gui.setItem(guiSlot, (item == null || item.getType() == Material.AIR) ? null : item.clone());
-                }
-            }
-        });
-    }
+
 
     @EventHandler(priority = EventPriority.LOW)
     public void onInventoryClick(InventoryClickEvent event) {

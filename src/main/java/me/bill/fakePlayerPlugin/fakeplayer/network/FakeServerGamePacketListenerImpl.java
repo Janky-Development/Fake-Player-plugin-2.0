@@ -14,7 +14,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.projectiles.ProjectileSource;
-import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -281,28 +280,6 @@ public final class FakeServerGamePacketListenerImpl extends ServerGamePacketList
             if (shooter instanceof Entity shooterEntity) return shooterEntity;
         }
         return damager;
-    }
-
-    private void logPostApplyVelocity(String strategyName) {
-        try {
-
-            Player bukkit = this.player.getBukkitEntity() instanceof Player p ? p : null;
-            if (bukkit != null) {
-                Vector v = bukkit.getVelocity();
-                Config.debugNms("[KB-DEBUG] "
-                        + strategyName
-                        + " POST-APPLY velocity on "
-                        + this.player.getScoreboardName()
-                        + ": x="
-                        + String.format("%.4f", v.getX())
-                        + " y="
-                        + String.format("%.4f", v.getY())
-                        + " z="
-                        + String.format("%.4f", v.getZ()));
-            }
-        } catch (Exception e) {
-            Config.debugNms("[KB-DEBUG] could not read post-apply velocity: " + e.getMessage());
-        }
     }
 
     private void markVelocityChanged() {

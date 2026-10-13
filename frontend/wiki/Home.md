@@ -47,7 +47,27 @@ as `[Bot] - name` if an admin enables it), are never counted as players, always 
 
 ---
 
-## Latest Version: v2.1.0 (Part 1)
+## Latest Version: v2.1.5
+
+**Highlights:**
+- 🖱️ **Client-authentic actions** - left/right-click are a port of the 26.3 client's own click logic: real
+  crosshair pick, attack-charge gating, the dig state machine, main/off-hand use order
+- 🗡️ **`/fpp attack`** - one-line guard / hunter setup with real client attacks, best-weapon pick and
+  return-to-post for AFK mob farms
+- ⛏️ **Legit `/fpp find`** - only blocks with an exposed face are detected (no X-ray); follows veins
+- 🧱 **`/fpp clear`** - self-running layer-by-layer excavation of a chunk/area; seals fluids, deposits or
+  discards loot, recovers when stuck and builds up
+- 🧭 **New pathfinder** - tick-costed A* over real collision shapes: climb, swim, doors, parkour,
+  tool-aware digging, bridging and pillar-up; time-sliced and Folia-safe
+- 🗺️ **Client-authentic chunk loading** - no plugin tickets; bots report a render distance like a client
+- 🚀 **Spawn actions** - `/fpp spawn --name Guard attack --chase`, `--count`, `--preset`, `then`/`wait`
+- 💰 **Rent GUI & shop integration** - built-in rental shop, packages, `/fpp rent package <id>`,
+  placeholders and a veto/re-price event; auto-renew, discounts, limits
+- 🧭 **`/fpp menu`** - main-menu hub; every menu reworked with centred cards and back navigation
+
+---
+
+## Previous Version: v2.1.0 (Part 1)
 
 **Highlights:**
 - 🛡️ **Network Protocol Error fix** - a per-viewer packet guard keeps scoreboard teams consistent
@@ -83,13 +103,13 @@ as `[Bot] - name` if an admin enables it), are never counted as players, always 
   is a server-wide default (`config.yml`) with a per-bot override in the settings GUI
 - 🔌 **ViaVersion-Aware** - bots register with ViaVersion (if installed) as running the server's own
   native protocol version, so it never treats them as an unrecognized connection
-- 🧭 **Real Pathfinding Engine** - Pathetic-backed A* navigation with parkour, block-breaking,
-  bridging, stuck detection with a hard give-up budget, pre-flight path verification, and a
+- 🧭 **Real Pathfinding Engine** - in-house tick-costed A* with climbing, swimming, doors, parkour,
+  tool-aware block breaking, bridging and pillar-up, partial routes, stuck recovery and a
   Baritone-style particle debug view (per bot or globally)
-- 🗡️ **PVE Combat** - per-bot smart attack with mob-type selection, detect range, target priority,
-  weapon-cooldown pacing, and pathfinding-linked chasing; now always active alongside other tasks
-- ⛏️ **`/fpp find` Automation** - search → path → mine loops with tool auto-equip, anti-stuck
-  watchdogs, and inventory-aware deposits into registered storages
+- 🗡️ **PVE Combat** - `/fpp attack` guard/hunter mode with mob-type selection, range, priority, best-weapon
+  pick, real attack-charge pacing and pathfinding-linked chasing
+- ⛏️ **`/fpp find` / `/fpp clear` Automation** - visible-only block search and layer-by-layer
+  excavation with tool auto-equip, anti-stuck recovery and inventory-aware deposits into storages
 - 🎯 **Precise Clicking** - `/fpp left-click` / `/fpp right-click` aim at the exact point you're
   looking at, walk to a reachable vantage (preferring your standing spot) when out of reach, and
   only trigger a button/lever when actually aimed at its hit box

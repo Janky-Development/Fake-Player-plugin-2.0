@@ -73,6 +73,51 @@ economy:
     warn-minutes-before-expiry: 10
     sweep-interval-seconds: 30
     max-bots-per-player: 3
+    # Seconds a rented bot stays after its time ran out (a window to extend). 0 = despawn immediately.
+    expiry-grace-seconds: 0
+    # Bulk pricing: rent at least <hours> and get <percent> off (the larger of this and the
+    # player's fpp.rent.discount.<n> permission applies; they do not stack).
+    bulk-discounts:
+      6: 5
+      24: 15
+      72: 25
+    # Auto-renew (/fpp rent auto <bot> on [hours]): renewed this many minutes before expiry, charged
+    # to the owner (works while they are offline with Vault).
+    auto-renew-lead-minutes: 2
+    auto-renew-hours: 1
+    # Built-in rent GUI (/fpp rent, /fpp rent gui, and the main menu card).
+    gui:
+      enabled: true
+    # Named offers. The rent GUI lists them, and ANY shop GUI plugin can sell one with the single
+    # command  fpp rent package <id> --for <player>  (console / fpp.rent.give).
+    #   hours: required, within min-hours..max-hours
+    #   label / icon / description: how it looks in GUIs
+    #   price: optional fixed price (replaces slot+hourly; discounts still apply)
+    #   permission: optional extra node needed to buy it
+    packages:
+      hour:
+        hours: 1
+        label: "1 Hour"
+        icon: CLOCK
+        description: ["A quick shift."]
+      half-day:
+        hours: 12
+        label: "12 Hours"
+        icon: CLOCK
+      day:
+        hours: 24
+        label: "1 Day"
+        icon: CLOCK
+        description: ["Best for overnight farms."]
+      three-days:
+        hours: 72
+        label: "3 Days"
+        icon: CLOCK
+  spawn:
+    # Price of a user-tier /fpp spawn (0 = free). Admins and fpp.spawn.free never pay.
+    price: 0.0
+  # Log every charge/refund to the console at INFO (audit trail) instead of debug only.
+  log-transactions: false
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # RESTART PERSISTENCE
@@ -242,15 +287,45 @@ death:
 # ═══════════════════════════════════════════════════════════════════════════════
 # CHUNK LOADING
 # ═══════════════════════════════════════════════════════════════════════════════
-# Keeps chunks around active bots loaded.
-# radius: auto uses the server simulation distance; 0 uses only the bot chunk.
-# mass-disable-threshold: 0 disables automatic mass-spawn ticket protection.
+# A bot behaves like an AFK player: the server's own chunk system loads, generates
+# and ticks the area around where it stands. The plugin does NOT hold chunk tickets
+# or change any server setting - the bot only reports a render distance, exactly
+# like the video-settings slider of a real client (see also `bot-client` below).
+#
+# view-distance: render distance each bot reports, in chunks.
+#   "auto" = the server's view distance. 0 = the vanilla minimum (2).
+#   Real loading/ticking range is still set by the server's own view/simulation
+#   distance; this value mainly bounds what the "client" is sent.
+#   Per-bot override: the bot settings GUI (-1 = follow this value).
+# update-interval: ticks between re-syncing each bot's options.
+# mass-disable-threshold: at this many active bots, every bot drops to
+#   mass-view-distance (0 disables the protection).
 # ═══════════════════════════════════════════════════════════════════════════════
 chunk-loading:
   enabled: true
-  radius: "auto"
+  view-distance: "auto"
   update-interval: 20
   mass-disable-threshold: 100
+  mass-view-distance: 3
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOT CLIENT OPTIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+# What each bot tells the server about its "client" - the in-game options menu.
+# language: locale code (en_us, de_de, ...)
+# main-hand: right | left
+# skin-parts: all | none | bitmask 0-127 (cape 1, jacket 2, sleeves 4+8, pants 16+32, hat 64)
+# particles: all | decreased | minimal
+# chat-visibility: full | system | hidden
+# allow-server-listings: whether the bot may appear in server-list player samples
+# ═══════════════════════════════════════════════════════════════════════════════
+bot-client:
+  language: "en_us"
+  main-hand: right
+  skin-parts: all
+  particles: all
+  chat-visibility: full
+  allow-server-listings: false
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BOT AUTOMATION DEFAULTS
@@ -450,6 +525,61 @@ right-click:
 attack-mob:
   default-range: 8.0
   default-priority: nearest
+  # Mode of a bare "/fpp attack <bot>": stand (hold position - AFK farms) or chase (hunt through pathfinding).
+  default-mode: stand
+  # Swap to the best melee weapon in the inventory when a fight starts.
+  auto-weapon: true
+  # Jump and strike while falling for critical hits (slower, higher damage per hit).
+  criticals: false
+  # Only attack targets the bot can see - a client cannot hit through walls.
+  line-of-sight: true
+  # Chase mode: after the fight, walk back to where the bot started.
+  return-to-post: true
+  return-delay-ticks: 60
+  scan-interval-ticks: 5
+  # Never auto-target tamed pets or villagers unless they are named explicitly.
+  spare-friendlies: true
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CLEAR (/fpp clear)
+# ═══════════════════════════════════════════════════════════════════════════════
+# max-cells: largest region (blocks) one job may cover.
+# progress-every-layers: tell the starter every N finished layers.
+# default-trash: what a bare `--trash` discards when the inventory fills (empty = built-in list).
+# ═══════════════════════════════════════════════════════════════════════════════
+clear:
+  max-cells: 2000000
+  progress-every-layers: 8
+  default-trash: []
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SPAWN ACTIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+# /fpp spawn [--name N] [--count N] [--location x y z world] [--delay 5s]
+#            [--preset P] <action> [args] [then|wait 5s <action> ...]
+# Actions run once, as the spawner (their permissions apply), when the bot is online.
+# Built-in actions: attack move find left-click right-click storage sneak freeze.
+# Any other registered command whose usage starts with <bot> also works.
+# Placeholders in action arguments: {bot} {owner} {x} {y} {z} {world} {index}
+# Durations: 10t = ticks, 5s = seconds, 2m = minutes (a bare number = seconds).
+# initial-delay-ticks: pause between "online" and the first action.
+# extra-commands / blocked-commands: widen or restrict the usable action names.
+# allow-run: let admins use `run <command...>` as an action (raw command line).
+# presets: reusable action strings, used as `--preset guard` or `preset guard`.
+# ═══════════════════════════════════════════════════════════════════════════════
+spawn-actions:
+  enabled: true
+  initial-delay-ticks: 10
+  max-count: 10
+  extra-commands: []
+  blocked-commands: []
+  allow-run: true
+  presets:
+    guard: "attack --stand"
+    hunter: "attack --chase --range 16"
+    farmer-guard: "attack --stand --range 6 --priority lowest-health"
+    miner: "left-click --hold"
+    clicker: "right-click --repeat"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # METRICS

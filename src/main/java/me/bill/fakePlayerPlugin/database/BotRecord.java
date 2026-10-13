@@ -200,37 +200,23 @@ public class BotRecord {
         return spawnPitch;
     }
 
-    public String getLastWorld() {
-        return lastWorld;
-    }
 
-    public double getLastX() {
-        return lastX;
-    }
 
-    public double getLastY() {
-        return lastY;
-    }
 
-    public double getLastZ() {
-        return lastZ;
-    }
 
-    public float getLastYaw() {
-        return lastYaw;
-    }
 
-    public float getLastPitch() {
-        return lastPitch;
-    }
+
+
+
+
+
+
 
     public Instant getSpawnedAt() {
         return spawnedAt;
     }
 
-    public Instant getRemovedAt() {
-        return removedAt;
-    }
+
 
     public String getRemoveReason() {
         return removeReason;

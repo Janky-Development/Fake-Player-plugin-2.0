@@ -201,10 +201,7 @@ public final class BadwordFilter {
         return rawWords.size() + customPatterns.size();
     }
 
-    public static int getWhitelistCount() {
-        if (!initialized) reload();
-        return whitelist.size();
-    }
+
 
     private static void addWord(@Nullable String word) {
         if (word == null || word.isBlank()) return;

@@ -26,6 +26,14 @@ FPP spawns server-side bot entities that behave like players - useful for **AFK 
 5. Configure permissions (see [Permissions](Permissions)).
 6. Run `/fpp reload` to apply most changes without restarting.
 
+## First Steps
+
+1. Spawn a bot: `/fpp spawn` (or `/fpp spawn --name Guard attack --chase` to give it a job immediately).
+2. Open the hub: `/fpp menu` - bots, settings, chunk loading, rent, help.
+3. Give it work: `/fpp attack <bot>` (AFK mob farm), `/fpp find <bot> ores`, `/fpp clear <bot> --chunk`,
+   `/fpp move <bot> --to <player>`, `/fpp left-click <bot> --hold`.
+4. Stop everything for a bot with `/fpp stop <bot>`; manage it in `/fpp settings <bot>`.
+
 ## Building from Source
 
 Requires JDK 21+ and the Gradle wrapper.

@@ -118,6 +118,7 @@ public final class FakePlayerPlugin extends JavaPlugin {
     private LeftClickCommand leftClickCommand;
     private RightClickCommand rightClickCommand;
     private FindCommand findCommand;
+    private me.bill.fakePlayerPlugin.command.ClearCommand clearCommand;
     private StopCommand stopCommand;
     private PathfindingService pathfindingService;
     private StorageStore storageStore;
@@ -128,6 +129,7 @@ public final class FakePlayerPlugin extends JavaPlugin {
     private me.bill.fakePlayerPlugin.fakeplayer.AutoEatController autoEatController;
     private EconomyManager economyManager;
     private RentalService rentalService;
+    private me.bill.fakePlayerPlugin.gui.RentGui rentGui;
     private HeartbeatSender heartbeatSender;
     private PerformanceMonitor performanceMonitor;
 
@@ -300,8 +302,7 @@ public final class FakePlayerPlugin extends JavaPlugin {
 
         pathfindingService = new PathfindingService(this, fakePlayerManager);
         pathfindingService.setController(
-                new me.bill.fakePlayerPlugin.fakeplayer.pathfinding.PatheticPathfindingController(
-                        this, fakePlayerManager));
+                new me.bill.fakePlayerPlugin.fakeplayer.pathfinding.NavController(this, fakePlayerManager));
 
         pveController = new PveController(this, fakePlayerManager, pathfindingService);
         pveController.start();
@@ -313,8 +314,10 @@ public final class FakePlayerPlugin extends JavaPlugin {
         rentalService.start();
 
         commandManager = new CommandManager(this);
+        rentGui = new me.bill.fakePlayerPlugin.gui.RentGui(this, fakePlayerManager);
+        getServer().getPluginManager().registerEvents(rentGui, this);
         commandManager.register(new RentCommand(this, fakePlayerManager));
-        commandManager.register(new SpawnCommand(fakePlayerManager));
+        commandManager.register(new SpawnCommand(fakePlayerManager, commandManager));
         commandManager.register(new DeleteCommand(fakePlayerManager));
         commandManager.register(new ListCommand(this, fakePlayerManager));
         commandManager.register(new TphCommand(fakePlayerManager));
@@ -335,6 +338,9 @@ public final class FakePlayerPlugin extends JavaPlugin {
         commandManager.register(moveCommand);
         findCommand = new FindCommand(this, fakePlayerManager, pathfindingService, storageStore);
         commandManager.register(findCommand);
+        clearCommand = new me.bill.fakePlayerPlugin.command.ClearCommand(
+                this, fakePlayerManager, pathfindingService, storageStore);
+        commandManager.register(clearCommand);
         commandManager.register(new StorageCommand(this, fakePlayerManager, storageStore, pathfindingService));
         attackCommand = new AttackCommand(this, fakePlayerManager);
         commandManager.register(attackCommand);
@@ -359,6 +365,7 @@ public final class FakePlayerPlugin extends JavaPlugin {
         stopCommand.setRightClickCommand(rightClickCommand);
         stopCommand.setAttackCommand(attackCommand);
         stopCommand.setFindCommand(findCommand);
+        stopCommand.setClearCommand(clearCommand);
         commandManager.register(stopCommand);
 
         var fppCmd = getCommand("fpp");
@@ -394,6 +401,11 @@ public final class FakePlayerPlugin extends JavaPlugin {
 
         botListGui = new BotListGui(this, fakePlayerManager);
         getServer().getPluginManager().registerEvents(botListGui, this);
+
+        me.bill.fakePlayerPlugin.gui.MainMenuGui mainMenuGui =
+                new me.bill.fakePlayerPlugin.gui.MainMenuGui(this, fakePlayerManager, botListGui, settingGui, helpGui);
+        getServer().getPluginManager().registerEvents(mainMenuGui, this);
+        commandManager.register(new me.bill.fakePlayerPlugin.command.MenuCommand(mainMenuGui));
 
         velocityChannel = new VelocityChannel(this, fakePlayerManager);
         getServer().getMessenger().registerOutgoingPluginChannel(this, VelocityChannel.CHANNEL);
@@ -621,9 +633,7 @@ public final class FakePlayerPlugin extends JavaPlugin {
         return botPersistence;
     }
 
-    public SettingGui getSettingGui() {
-        return settingGui;
-    }
+
 
     public BotSettingGui getBotSettingGui() {
         return botSettingGui;
@@ -637,9 +647,7 @@ public final class FakePlayerPlugin extends JavaPlugin {
         return databaseManager;
     }
 
-    public BotAuthManager getBotAuthManager() {
-        return botAuthManager;
-    }
+
 
     public VelocityChannel getVelocityChannel() {
         return velocityChannel;
@@ -663,6 +671,10 @@ public final class FakePlayerPlugin extends JavaPlugin {
 
     public EconomyManager getEconomyManager() {
         return economyManager;
+    }
+
+    public me.bill.fakePlayerPlugin.gui.RentGui getRentGui() {
+        return rentGui;
     }
 
     public RentalService getRentalService() {
@@ -692,18 +704,18 @@ public final class FakePlayerPlugin extends JavaPlugin {
     public FindCommand getFindCommand() {
         return findCommand;
     }
+    public me.bill.fakePlayerPlugin.command.ClearCommand getClearCommand() {
+        return clearCommand;
+    }
+
 
     public PathfindingService getPathfindingService() {
         return pathfindingService;
     }
 
-    public StorageStore getStorageStore() {
-        return storageStore;
-    }
 
-    public InventoryCommand getInventoryCommand() {
-        return inventoryCommand;
-    }
+
+
 
     public SkinManager getSkinManager() {
         return skinManager;
@@ -713,13 +725,9 @@ public final class FakePlayerPlugin extends JavaPlugin {
         return skinPoolService;
     }
 
-    public void setSkinManager(SkinManager skinManager) {
-        this.skinManager = skinManager;
-    }
 
-    public FppMetrics getFppMetrics() {
-        return fppMetrics;
-    }
+
+
 
     public Component getUpdateNotification() {
         return updateNotificationMessage;

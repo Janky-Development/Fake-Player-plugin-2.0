@@ -167,28 +167,23 @@ these are only the fallback for bots that haven't been given their own value.
 - `max-horizontal-speed: 0.30`
 
 ### `pathfinding`
-Pathfinding tuning keys:
-- `parkour: true` - walk across gaps
-- `break-blocks: true` - break obstructing blocks while pathing
-- `place-blocks: true` - place bridging blocks while pathing
-- `place-material: STONE` - material used for bridging
-- `arrival-distance: 1.5` - blocks before a simple destination is considered reached
-- `patrol-arrival-distance: 2.0` - arrival threshold for patrol loops
-- `waypoint-arrival-distance: 2.0` - arrival threshold for waypoint navigation
-- `sprint-distance: 6.0` - distance at which the bot starts sprinting
-- `follow-recalc-distance: 5.0` - distance before recalculating follow path
-- `follow-recalc-interval: 20` - ticks between follow path recalcs
-- `recalc-interval: 40` - ticks between normal path recalculations
-- `stuck-ticks: 20` - ticks before a stuck-check fires
-- `stuck-threshold: 3` - consecutive stuck ticks before giving up
-- `break-ticks: 20` - delay between block-break attempts while moving
-- `place-ticks: 20` - delay between block-place attempts while moving
-- `max-fall: 10.0` - maximum fall distance the navigator will voluntarily traverse
-- `max-range: 128.0` - maximum search distance
-- `max-nodes: 3200` - node limit for standard pathfinding
-- `max-nodes-extended: 6400` - node limit for long-distance searches
-- `detour-attempts: 2` - how many times to try detouring around obstacles
-- `detour-radius: 1` - extra blocks to look around obstacles
+The engine is an A* costed in ticks over the server's real collision shapes. Every key below is optional
+(they are not in the default `config.yml`); the value shown is the built-in default.
+- `parkour: false` - allow 2-3 block gap jumps (also per bot in the settings GUI)
+- `break-blocks: false` - allow digging obstructing blocks while pathing (priced by the bot's real tool)
+- `place-blocks: false` - allow bridging gaps and pillaring up with scaffold blocks from the inventory
+- `place-material: DIRT` - preferred scaffold block (else cobblestone, deepslate, dirt, netherrack, stone, …)
+- `arrival-distance: 1.2` - blocks from the target at which a walk counts as arrived
+- `waypoint-arrival-distance: 0.65` - how close to a path node counts as reaching it
+- `sprint-distance: 6.0` - remaining path length above which the bot sprints on straight runs
+- `follow-recalc-distance: 3.5` - how far a followed target may move before re-planning
+- `stuck-ticks: 10` - ticks without progress before a stuck check fires (a hop first, then a re-plan)
+- `stuck-threshold: 0.04` - movement (blocks) below which a tick counts as "no progress"
+- `max-stuck-cycles: 4` - fruitless stuck cycles before the walk is abandoned
+- `max-fall: 3` - deepest drop (1-16 blocks) a route may take voluntarily
+- `max-range: 64` - base search radius (grows with the distance to the goal, capped at 256)
+- `max-nodes-extended: 1800` - node budget; the search allows `max(4000, 4 × this)` nodes, time-sliced at
+  ~1.5 ms per bot per tick, then settles for the closest explored point and re-plans from there
 
 ---
 
@@ -210,11 +205,40 @@ Pathfinding tuning keys:
 
 ## 6. Chunk Loading
 
+Bots are ordinary players to the server: its own chunk system loads, generates and ticks the area
+where a bot stands, exactly as for an AFK player. FPP holds **no chunk tickets** and changes **no server
+setting** - a bot only reports a render distance (and other options) the way a real client does.
+
 ### `chunk-loading`
-- `enabled: true` - keep chunks loaded around bots
-- `radius: "auto"` - `"auto"`, `0` = disabled, or fixed number
-- `update-interval: 20` - ticks between position checks
-- `mass-disable-threshold: 100` - release chunk tickets when active bots exceed this (`0` = never)
+- `enabled: true` - off = every bot reports the vanilla minimum render distance (2)
+- `view-distance: "auto"` - render distance each bot reports: `"auto"` (server view distance), `0` = minimum, or 2-32. Per-bot override in the bot settings GUI.
+- `update-interval: 20` - ticks between re-syncing each bot's options
+- `mass-disable-threshold: 100` - at this many active bots every bot drops to `mass-view-distance` (`0` = never)
+- `mass-view-distance: 3` - render distance used while the threshold is reached
+
+### `clear`
+- `max-cells: 2000000` - largest region one `/fpp clear` may cover
+- `progress-every-layers: 8` - progress messages to the starter every N layers
+- `default-trash: []` - what a bare `--trash` discards when the inventory fills (empty = built-in list)
+
+### `spawn-actions`
+- `enabled: true`, `initial-delay-ticks: 10` (pause between online and first action), `max-count: 10` (`--count` cap)
+- `extra-commands: []` / `blocked-commands: []` - widen or restrict the usable action names (any command whose usage starts with `<bot>` already works)
+- `allow-run: true` - let admins use `run <command…>` as an action
+- `presets:` - named action strings used as `--preset guard` / `preset guard`
+
+### `attack-mob`
+- `default-range: 8.0`, `default-priority: nearest` - defaults for new PVE bots
+- `default-mode: stand` - mode of a bare `/fpp attack <bot>` (`stand` holds position, `chase` hunts)
+- `auto-weapon: true` - equip the best melee weapon (by attack damage × speed) when a fight starts
+- `criticals: false` - jump and strike while falling for critical hits
+- `line-of-sight: true` - a standing bot only wakes for targets it can see
+- `return-to-post: true`, `return-delay-ticks: 60` - chase mode walks back to its start after the fight
+- `scan-interval-ticks: 5`, `spare-friendlies: true` - target scan rate; skip tamed pets/villagers unless named
+
+### `bot-client`
+The bot's "options menu", sent to the server like a real client's client-information packet:
+`language`, `main-hand` (`right`/`left`), `skin-parts` (`all`/`none`/0-127), `particles`, `chat-visibility`, `allow-server-listings`.
 
 ---
 

@@ -2,33 +2,37 @@ package me.bill.fakePlayerPlugin.fakeplayer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 import me.bill.fakePlayerPlugin.FakePlayerPlugin;
 import me.bill.fakePlayerPlugin.config.Config;
+import me.bill.fakePlayerPlugin.economy.EconomyManager;
+import me.bill.fakePlayerPlugin.economy.RentalPricing;
+import me.bill.fakePlayerPlugin.economy.RentalPurchases;
 import me.bill.fakePlayerPlugin.lang.Lang;
 import me.bill.fakePlayerPlugin.permission.Perm;
 import me.bill.fakePlayerPlugin.util.FppScheduler;
 
 /**
- * Periodically checks every active bot's {@link FakePlayer#getRentalExpiresAt()} and:
- * <ul>
- *   <li>warns the owner once, {@code economy.rental.warn-minutes-before-expiry} minutes out, and</li>
- *   <li>despawns the bot (with a notice) the moment its paid time actually runs out.</li>
- * </ul>
+ * The rental life-cycle, swept on a timer: warns an owner once as time runs low, renews bots that
+ * opted into auto-renew, and despawns a bot once its paid time (plus any configured grace period) has
+ * run out.
  *
- * <p>This runs independently of whether economy purchasing itself is enabled/available -
- * {@code /fpp rent give} can hand out rental time with no economy plugin involved at all (that's
- * the point of it - a custom shop plugin's own reward command), so a bot can be "rented" (i.e. carry
- * an expiry) regardless of {@link Config#economyEnabled()}. The sweep only cares whether any bot
- * actually has an expiry set.
+ * <p>It runs regardless of whether economy purchasing is enabled -
+ * {@code /fpp rent give} can hand out time with no economy plugin at all - so it only looks at which
+ * bots actually carry an expiry.
  */
 public final class RentalService {
 
     private final FakePlayerPlugin plugin;
     private final FakePlayerManager manager;
+    private final Map<UUID, Integer> autoRenew = new ConcurrentHashMap<>();
     private int taskId = -1;
 
     public RentalService(FakePlayerPlugin plugin, FakePlayerManager manager) {
@@ -38,6 +42,15 @@ public final class RentalService {
 
     public void start() {
         if (taskId >= 0) return;
+        var db = plugin.getDatabaseManager();
+        if (db != null) {
+            db.loadRentalAutoRenew().forEach((uuid, hours) -> {
+                try {
+                    autoRenew.put(UUID.fromString(uuid), hours);
+                } catch (IllegalArgumentException ignored) {
+                }
+            });
+        }
         long periodTicks = Math.max(100L, Config.rentalSweepIntervalSeconds() * 20L);
         taskId = FppScheduler.runSyncRepeatingWithId(plugin, this::sweep, periodTicks, periodTicks);
     }
@@ -49,32 +62,96 @@ public final class RentalService {
         }
     }
 
+    // ── auto-renew ──────────────────────────────────────────────────────────
+
+    /** Hours this bot renews by automatically, or 0 when auto-renew is off. */
+    public int getAutoRenewHours(UUID botUuid) {
+        return autoRenew.getOrDefault(botUuid, 0);
+    }
+
+    /** {@code hours <= 0} switches auto-renew off. Persisted across restarts. */
+    public void setAutoRenewHours(UUID botUuid, int hours) {
+        if (hours > 0) autoRenew.put(botUuid, hours);
+        else autoRenew.remove(botUuid);
+        var db = plugin.getDatabaseManager();
+        if (db != null) db.setRentalAutoRenew(botUuid.toString(), Math.max(0, hours));
+    }
+
+    // ── sweep ───────────────────────────────────────────────────────────────
+
     private void sweep() {
         long now = System.currentTimeMillis();
         long warnThresholdMs = Config.rentalWarnMinutesBeforeExpiry() * 60_000L;
+        long leadMs = Config.rentalAutoRenewLeadMinutes() * 60_000L;
+        long graceMs = Config.rentalExpiryGraceSeconds() * 1000L;
 
-        // Snapshot first: despawning inside the loop would mutate manager.getActivePlayers() while
-        // iterating it.
+        // Snapshot first: despawning inside the loop would mutate manager.getActivePlayers().
         List<FakePlayer> expired = new ArrayList<>();
-        for (FakePlayer fp : manager.getActivePlayers()) {
+        for (FakePlayer fp : new ArrayList<>(manager.getActivePlayers())) {
             Long expiresAt = fp.getRentalExpiresAt();
             if (expiresAt == null) continue;
             if (hasUnlimitedRental(fp)) continue;
 
             long remaining = expiresAt - now;
-            if (remaining <= 0) {
+
+            // Auto-renew before the clock actually runs out.
+            if (remaining <= leadMs && getAutoRenewHours(fp.getUuid()) > 0 && tryAutoRenew(fp)) continue;
+
+            if (remaining <= -graceMs) {
                 expired.add(fp);
                 continue;
             }
-            if (warnThresholdMs > 0 && !fp.isRentalWarningSent() && remaining <= warnThresholdMs) {
+            if (warnThresholdMs > 0 && !fp.isRentalWarningSent() && remaining <= warnThresholdMs && remaining > 0) {
                 warnOwner(fp, remaining);
                 fp.setRentalWarningSent(true);
             }
         }
 
-        for (FakePlayer fp : expired) {
-            expire(fp);
+        for (FakePlayer fp : expired) expire(fp);
+    }
+
+    /** @return true when the bot was renewed (so this sweep skips it). */
+    private boolean tryAutoRenew(FakePlayer fp) {
+        int hours = getAutoRenewHours(fp.getUuid());
+        EconomyManager economy = plugin.getEconomyManager();
+        OfflinePlayer owner = Bukkit.getOfflinePlayer(fp.getSpawnedByUuid());
+        Player online = owner.getPlayer();
+
+        double cost;
+        if (online != null) {
+            cost = RentalPricing.quote(online, hours, false).total();
+        } else {
+            cost = RentalPricing.compute(
+                            hours, 0.0, Config.rentalPricePerHour(), Config.rentalBulkDiscounts(), 0.0, false)
+                    .total();
         }
+
+        boolean paid = cost <= 0;
+        if (!paid && economy != null) {
+            paid = economy.charge(owner, cost, "rental auto-renew " + fp.getName() + " +" + hours + "h")
+                    == EconomyManager.ChargeResult.OK;
+        }
+        if (!paid) {
+            // Stop trying every sweep; the bot now expires normally and the owner is told why.
+            setAutoRenewHours(fp.getUuid(), 0);
+            if (online != null) online.sendMessage(Lang.get("rent-auto-failed", "name", fp.getDisplayName()));
+            return false;
+        }
+
+        long expiry = RentalPurchases.grantHours(plugin, fp, hours);
+        if (online != null) {
+            online.sendMessage(Lang.get(
+                    "rent-auto-renewed",
+                    "name",
+                    fp.getDisplayName(),
+                    "hours",
+                    String.valueOf(hours),
+                    "cost",
+                    economy != null ? economy.format(cost) : String.valueOf(cost),
+                    "remaining",
+                    RentalPurchases.formatRemaining(expiry - System.currentTimeMillis())));
+        }
+        return true;
     }
 
     /** True if the bot's owner currently holds the bypass permission - checked live, not cached. */
@@ -97,6 +174,7 @@ public final class RentalService {
         }
         Config.debugRental(
                 "Rental time expired for bot '" + fp.getName() + "' (owner=" + fp.getSpawnedBy() + ") - despawning.");
+        setAutoRenewHours(fp.getUuid(), 0);
         manager.delete(fp.getName(), "rental_expired");
     }
 }

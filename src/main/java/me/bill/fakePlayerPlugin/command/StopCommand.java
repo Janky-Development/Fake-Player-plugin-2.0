@@ -37,6 +37,7 @@ public final class StopCommand implements FppCommand {
 
     @Nullable
     private FindCommand findCommand;
+    private ClearCommand clearCommand;
 
     // ── Constructor ──────────────────────────────────────────────────────────
 
@@ -60,6 +61,10 @@ public final class StopCommand implements FppCommand {
 
     public void setAttackCommand(@Nullable AttackCommand cmd) {
         this.attackCommand = cmd;
+    }
+
+    public void setClearCommand(@Nullable ClearCommand cmd) {
+        this.clearCommand = cmd;
     }
 
     public void setFindCommand(@Nullable FindCommand cmd) {
@@ -151,6 +156,10 @@ public final class StopCommand implements FppCommand {
         }
         if (findCommand != null && findCommand.isFinding(uuid)) {
             findCommand.cleanupBot(uuid);
+            did = true;
+        }
+        if (clearCommand != null && clearCommand.isClearing(uuid)) {
+            clearCommand.cleanupBot(uuid);
             did = true;
         }
 

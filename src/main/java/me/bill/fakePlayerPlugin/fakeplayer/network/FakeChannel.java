@@ -39,9 +39,7 @@ public final class FakeChannel extends AbstractChannel {
         this.address = address;
     }
 
-    public void setPacketListener(Consumer<Object> listener) {
-        this.packetListener = listener;
-    }
+
 
     public Consumer<Object> getPacketListener() {
         return packetListener;

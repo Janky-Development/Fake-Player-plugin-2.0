@@ -6,7 +6,6 @@ import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 
-import net.kyori.adventure.text.Component;
 
 public final class CompatibilityChecker {
 
@@ -60,10 +59,7 @@ public final class CompatibilityChecker {
         return new Result(false, true, true, detectedVersion, List.of());
     }
 
-    @SuppressWarnings("unused")
-    public static Component buildWarningComponent(Result result) {
-        return null;
-    }
+
 
     public static String extractMcVersion() {
         try {

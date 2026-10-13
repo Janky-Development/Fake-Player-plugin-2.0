@@ -44,13 +44,12 @@ believe you have a legitimate use case, open a discussion first - don't lead wit
 
 - **JDK 21+**, Gradle wrapper included.
 - Build: `./gradlew clean shadowJar` → `build/libs/fake-player-plugin-<version>-all.jar`
-- Tests: `./gradlew test`
 - Formatting: `./gradlew spotlessApply` (CI-enforced style; run it before committing)
 
 ## Pull Request Guidelines
 
 1. One logical change per PR; keep diffs reviewable.
-2. `./gradlew spotlessApply test shadowJar` must pass locally.
+2. `./gradlew spotlessApply shadowJar` must pass locally.
 3. Player-facing text goes through `language/en.yml` (small-caps style, `{prefix}`, `#0079FF`
    accent) - no hardcoded chat strings in Java.
 4. New config keys need defaults in `config.yml` plus a note in `frontend/wiki/Configuration.md`.

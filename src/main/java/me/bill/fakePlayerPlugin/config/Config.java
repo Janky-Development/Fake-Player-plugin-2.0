@@ -4,7 +4,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -20,25 +19,11 @@ public final class Config {
     private static FakePlayerPlugin plugin;
     private static FileConfiguration cfg;
     private static FileConfiguration debugCfg;
-    private static final Map<String, FileConfiguration> externalConfigs = new ConcurrentHashMap<>();
 
     private Config() {}
 
-    public static void registerExternalConfig(String rootKey, FileConfiguration config) {
-        if (rootKey == null || rootKey.isBlank() || config == null) return;
-        externalConfigs.put(rootKey, config);
-    }
-
-    public static void unregisterExternalConfig(String rootKey, FileConfiguration config) {
-        if (rootKey == null || config == null) return;
-        externalConfigs.remove(rootKey, config);
-    }
-
     private static FileConfiguration configFor(String path) {
-        int dot = path.indexOf('.');
-        String root = dot >= 0 ? path.substring(0, dot) : path;
-        FileConfiguration external = externalConfigs.get(root);
-        return external != null ? external : cfg;
+        return cfg;
     }
 
     private static boolean debugBool(String path, boolean def) {
@@ -68,10 +53,6 @@ public final class Config {
 
     private static Object value(String path) {
         return configFor(path).get(path);
-    }
-
-    private static List<Map<?, ?>> mapList(String path) {
-        return configFor(path).getMapList(path);
     }
 
     private static ConfigurationSection section(String path) {
@@ -205,10 +186,6 @@ public final class Config {
         return isDebug() || debugBool("auth", false);
     }
 
-    public static boolean debugCommands() {
-        return isDebug() || debugBool("commands", false);
-    }
-
     public static boolean debugHeadAi() {
         return isDebug() || debugBool("head-ai", false);
     }
@@ -217,34 +194,8 @@ public final class Config {
         return isDebug() || debugBool("right-click", false);
     }
 
-    public static boolean debugRightClickHead() {
-        return isDebug() || debugBool("right-click-head", false);
-    }
-
     public static boolean debugLeftClick() {
         return isDebug() || debugBool("left-click", false);
-    }
-
-    public static boolean debugLeftClickHead() {
-        return isDebug() || debugBool("left-click-head", false);
-    }
-
-    public static boolean debugGeneral() {
-        return isDebug() || debugBool("general", false);
-    }
-
-    public static boolean debugNmsPhysics() {
-        if (isDebug()) return true;
-        if (debugBool("nms.physics", false)) return true;
-        return false;
-    }
-
-    public static boolean debugDbMigration() {
-        return isDebug() || debugDatabase() || debugBool("database.migration", false);
-    }
-
-    public static boolean debugDbPersistence() {
-        return isDebug() || debugDatabase() || debugBool("database.persistence", false);
     }
 
     public static boolean debugChatBroadcast() {
@@ -367,6 +318,79 @@ public final class Config {
     }
 
     /** How many rented (paid) bots one player may have active at once; unaffected by fpp.rent.unlimited. */
+    /** {@code economy.rental.bulk-discounts: {hours: percent}} sorted by hours ascending. */
+    public static java.util.List<int[]> rentalBulkDiscounts() {
+        java.util.List<int[]> out = new java.util.ArrayList<>();
+        var section = cfg.getConfigurationSection("economy.rental.bulk-discounts");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                try {
+                    int hours = Integer.parseInt(key.trim());
+                    int pct = Math.max(0, Math.min(100, section.getInt(key)));
+                    out.add(new int[] {hours, pct});
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        out.sort(java.util.Comparator.comparingInt(a -> a[0]));
+        return out;
+    }
+
+    /** Named rental offers ({@code economy.rental.packages}), limited to the allowed hour range. */
+    public static java.util.List<me.bill.fakePlayerPlugin.economy.RentalPackage> rentalPackages() {
+        java.util.List<me.bill.fakePlayerPlugin.economy.RentalPackage> out = new java.util.ArrayList<>();
+        var section = cfg.getConfigurationSection("economy.rental.packages");
+        if (section == null) return out;
+        for (String id : section.getKeys(false)) {
+            var s = section.getConfigurationSection(id);
+            if (s == null) continue;
+            int hours = s.getInt("hours", 0);
+            if (hours < rentalMinHours() || hours > rentalMaxHours()) continue;
+            org.bukkit.Material icon = org.bukkit.Material.matchMaterial(s.getString("icon", "CLOCK"));
+            if (icon == null || icon.isAir()) icon = org.bukkit.Material.CLOCK;
+            Double price = s.contains("price") ? Math.max(0.0, s.getDouble("price")) : null;
+            String perm = s.getString("permission");
+            out.add(new me.bill.fakePlayerPlugin.economy.RentalPackage(
+                    id.toLowerCase(java.util.Locale.ROOT),
+                    s.getString("label", hours + "h"),
+                    hours,
+                    icon,
+                    price,
+                    perm == null || perm.isBlank() ? null : perm,
+                    s.getStringList("description")));
+        }
+        return out;
+    }
+
+    /** Whether {@code /fpp rent} (no arguments) opens the built-in rent GUI. */
+    public static boolean rentalGuiEnabled() {
+        return cfg.getBoolean("economy.rental.gui.enabled", true);
+    }
+
+    /** Seconds a rental stays up after its time ran out before the bot despawns. */
+    public static int rentalExpiryGraceSeconds() {
+        return Math.max(0, cfg.getInt("economy.rental.expiry-grace-seconds", 0));
+    }
+
+    /** Auto-renew fires when this many minutes of paid time are left. */
+    public static int rentalAutoRenewLeadMinutes() {
+        return Math.max(1, cfg.getInt("economy.rental.auto-renew-lead-minutes", 2));
+    }
+
+    public static int rentalAutoRenewDefaultHours() {
+        return Math.max(1, cfg.getInt("economy.rental.auto-renew-hours", 1));
+    }
+
+    /** Log every charge/refund to console at INFO (an audit trail), not just in debug. */
+    public static boolean economyLogTransactions() {
+        return cfg.getBoolean("economy.log-transactions", false);
+    }
+
+    /** Price a user-tier {@code /fpp spawn} costs (0 = free). Admins and {@code fpp.spawn.free} never pay. */
+    public static double spawnPrice() {
+        return Math.max(0.0, cfg.getDouble("economy.spawn.price", 0.0));
+    }
+
     public static int rentalMaxBotsPerPlayer() {
         return Math.max(1, cfg.getInt("economy.rental.max-bots-per-player", 3));
     }
@@ -508,10 +532,6 @@ public final class Config {
         return cfg.getBoolean("messages.leave-message", true);
     }
 
-    public static boolean warningsNotifyAdmins() {
-        return cfg.getBoolean("messages.notify-admins-on-join", true);
-    }
-
     public static double maxHealth() {
         return cfg.getDouble("combat.max-health", 20.0);
     }
@@ -548,13 +568,68 @@ public final class Config {
         return cfg.getBoolean("chunk-loading.enabled", true);
     }
 
+    /**
+     * The render distance (in chunks) each bot reports to the server, like the video-settings slider of a
+     * real client. {@code "auto"} (or unset) follows the server's view distance; 0 = the vanilla minimum.
+     * Falls back to the legacy {@code chunk-loading.radius} key.
+     */
     public static int chunkLoadingRadius() {
-        Object raw = cfg.get("chunk-loading.radius");
+        Object raw = cfg.get("chunk-loading.view-distance");
+        if (raw == null) raw = cfg.get("chunk-loading.radius");
         if (raw instanceof Number n) {
-            return Math.max(0, n.intValue());
+            return Math.max(0, Math.min(32, n.intValue()));
         }
+        if (raw instanceof String s && !s.isBlank() && !s.equalsIgnoreCase("auto")) {
+            try {
+                return Math.max(0, Math.min(32, Integer.parseInt(s.trim())));
+            } catch (NumberFormatException ignored) {
+                // fall through to auto
+            }
+        }
+        return Math.max(2, Math.min(32, Bukkit.getViewDistance()));
+    }
 
-        return Bukkit.getSimulationDistance();
+    /** Render distance used by every bot once the active bot count reaches the mass threshold. */
+    public static int chunkLoadingMassViewDistance() {
+        return Math.max(2, Math.min(32, cfg.getInt("chunk-loading.mass-view-distance", 3)));
+    }
+
+    // ── What each bot's "client" tells the server about itself (the in-game options menu) ──────────
+
+    public static String clientLanguage() {
+        return string("bot-client.language", "en_us").toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** {@code true} when the bot's main hand is the left one. */
+    public static boolean clientLeftHanded() {
+        return string("bot-client.main-hand", "right").equalsIgnoreCase("left");
+    }
+
+    /** Skin-layer bitmask: {@code "all"} = 127 (what a default client sends), {@code "none"} = 0, or a number. */
+    public static int clientSkinParts() {
+        Object raw = cfg.get("bot-client.skin-parts");
+        if (raw instanceof Number n) return n.intValue() & 0x7F;
+        String s = raw == null ? "all" : raw.toString().trim().toLowerCase(java.util.Locale.ROOT);
+        if (s.equals("none")) return 0;
+        try {
+            return Integer.parseInt(s) & 0x7F;
+        } catch (NumberFormatException e) {
+            return 0x7F;
+        }
+    }
+
+    /** {@code all} / {@code decreased} / {@code minimal}. */
+    public static String clientParticles() {
+        return string("bot-client.particles", "all").toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** {@code full} / {@code system} / {@code hidden}. */
+    public static String clientChatVisibility() {
+        return string("bot-client.chat-visibility", "full").toLowerCase(java.util.Locale.ROOT);
+    }
+
+    public static boolean clientAllowServerListings() {
+        return cfg.getBoolean("bot-client.allow-server-listings", false);
     }
 
     public static int chunkLoadingUpdateInterval() {
@@ -605,10 +680,6 @@ public final class Config {
         return decimal("pathfinding.arrival-distance", 1.2);
     }
 
-    public static double pathfindingPatrolArrivalDistance() {
-        return decimal("pathfinding.patrol-arrival-distance", 1.5);
-    }
-
     public static double pathfindingWaypointArrivalDistance() {
         return decimal("pathfinding.waypoint-arrival-distance", 0.65);
     }
@@ -619,14 +690,6 @@ public final class Config {
 
     public static double pathfindingFollowRecalcDistance() {
         return decimal("pathfinding.follow-recalc-distance", 3.5);
-    }
-
-    public static int pathfindingFollowRecalcInterval() {
-        return Math.max(1, integer("pathfinding.follow-recalc-interval", 100));
-    }
-
-    public static int pathfindingRecalcInterval() {
-        return Math.max(1, integer("pathfinding.recalc-interval", 60));
     }
 
     public static int pathfindingStuckTicks() {
@@ -644,14 +707,6 @@ public final class Config {
      */
     public static int pathfindingMaxStuckCycles() {
         return Math.max(1, integer("pathfinding.max-stuck-cycles", 4));
-    }
-
-    public static int pathfindingBreakTicks() {
-        return Math.max(1, integer("pathfinding.break-ticks", 15));
-    }
-
-    public static int pathfindingPlaceTicks() {
-        return Math.max(1, integer("pathfinding.place-ticks", 5));
     }
 
     public static int pathfindingMaxFall() {
@@ -815,10 +870,6 @@ public final class Config {
         return List.of();
     }
 
-    public static boolean isBadwordAutoRenameEnabled() {
-        return cfg.getBoolean("badword-filter.auto-rename", true);
-    }
-
     public static boolean isBadwordAutoDetectionEnabled() {
         return cfg.getBoolean("badword-filter.auto-detection.enabled", true);
     }
@@ -919,6 +970,110 @@ public final class Config {
 
     public static String attackMobDefaultPriority() {
         return cfg.getString("attack-mob.default-priority", "nearest");
+    }
+
+    /** Mode applied by a bare {@code /fpp attack <bot>}: {@code stand} (hold position) or {@code chase}. */
+    // ── /fpp clear ───────────────────────────────────────────────────────────────
+
+    /** Largest region (in blocks) one clear job may cover. */
+    public static int clearMaxCells() {
+        return Math.max(1000, cfg.getInt("clear.max-cells", 2_000_000));
+    }
+
+    /** Announce progress to the starter every this many finished layers. */
+    public static int clearProgressEveryLayers() {
+        return Math.max(1, cfg.getInt("clear.progress-every-layers", 8));
+    }
+
+    /** Materials discarded by a bare {@code --trash} when the inventory fills. */
+    public static java.util.List<String> clearDefaultTrash() {
+        var list = cfg.getStringList("clear.default-trash");
+        return list.isEmpty()
+                ? java.util.List.of(
+                        "COBBLESTONE", "COBBLED_DEEPSLATE", "DIRT", "GRAVEL", "STONE", "DEEPSLATE", "ANDESITE",
+                        "DIORITE", "GRANITE", "TUFF", "NETHERRACK", "SAND")
+                : list;
+    }
+
+    // ── /fpp spawn actions ───────────────────────────────────────────────────────
+
+    public static boolean spawnActionsEnabled() {
+        return cfg.getBoolean("spawn-actions.enabled", true);
+    }
+
+    /** Ticks between a bot coming online and its first queued action. */
+    public static int spawnActionsInitialDelayTicks() {
+        return Math.max(1, cfg.getInt("spawn-actions.initial-delay-ticks", 10));
+    }
+
+    /** Most bots one {@code /fpp spawn --count} may create. */
+    public static int spawnActionsMaxCount() {
+        return Math.max(1, cfg.getInt("spawn-actions.max-count", 10));
+    }
+
+    /** Extra command names usable as spawn actions on top of the built-in set. */
+    public static java.util.List<String> spawnActionsExtra() {
+        return cfg.getStringList("spawn-actions.extra-commands");
+    }
+
+    /** Command names that may never be a spawn action. */
+    public static java.util.List<String> spawnActionsBlocked() {
+        return cfg.getStringList("spawn-actions.blocked-commands");
+    }
+
+    /** Whether admins may use {@code run <command…>} (a raw command with placeholders) as an action. */
+    public static boolean spawnActionsAllowRun() {
+        return cfg.getBoolean("spawn-actions.allow-run", true);
+    }
+
+    /** Named action presets: {@code preset name -> "attack --chase --range 12 then …"}. */
+    public static java.util.Map<String, String> spawnPresets() {
+        java.util.Map<String, String> out = new java.util.LinkedHashMap<>();
+        var section = cfg.getConfigurationSection("spawn-actions.presets");
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                String v = section.getString(key);
+                if (v != null && !v.isBlank()) out.put(key.toLowerCase(java.util.Locale.ROOT), v.trim());
+            }
+        }
+        return out;
+    }
+
+    public static boolean attackDefaultChase() {
+        return cfg.getString("attack-mob.default-mode", "stand").equalsIgnoreCase("chase");
+    }
+
+    /** Swap to the best melee weapon in the inventory when engaging. */
+    public static boolean attackAutoWeapon() {
+        return cfg.getBoolean("attack-mob.auto-weapon", true);
+    }
+
+    /** Jump and strike on the way down for critical hits. */
+    public static boolean attackCriticals() {
+        return cfg.getBoolean("attack-mob.criticals", false);
+    }
+
+    /** Only engage targets the bot can actually see (a client can't hit through walls). */
+    public static boolean attackRequireLineOfSight() {
+        return cfg.getBoolean("attack-mob.line-of-sight", true);
+    }
+
+    /** After a fight, walk back to where the bot started (chase mode only). */
+    public static boolean attackReturnToPost() {
+        return cfg.getBoolean("attack-mob.return-to-post", true);
+    }
+
+    public static int attackReturnDelayTicks() {
+        return Math.max(0, cfg.getInt("attack-mob.return-delay-ticks", 60));
+    }
+
+    public static int attackScanIntervalTicks() {
+        return Math.max(1, cfg.getInt("attack-mob.scan-interval-ticks", 5));
+    }
+
+    /** Never engage tamed pets, villagers, or other peaceful non-listed mobs unless named explicitly. */
+    public static boolean attackSpareFriendlies() {
+        return cfg.getBoolean("attack-mob.spare-friendlies", true);
     }
 
     public static boolean performanceEnabled() {

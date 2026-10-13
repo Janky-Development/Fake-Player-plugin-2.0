@@ -26,7 +26,6 @@ public final class FppLogger {
 
     private static final String GREEN = "\u001B[38;2;186;255;79m"; // lime #BAFF4F
 
-    private static final String GOLD = "\u001B[38;2;186;255;79m"; // lime #BAFF4F
 
     private static final String RED = "\u001B[38;2;255;106;92m"; // red #FF6A5C
 
@@ -115,26 +114,7 @@ public final class FppLogger {
         logger.info(TAG + " " + GRAY + "  " + WHITE + key + " " + dotStr + " " + BLUE + value + RESET);
     }
 
-    public static void statusRow(boolean ok, String label, String detail) {
-        String badge = ok ? GREEN + "[+]" + RESET : RED + "[✘]" + RESET;
-        int dots = Math.max(1, KEY_WIDTH - label.length());
-        String dotStr = DARK + ".".repeat(dots) + RESET;
-        String valueColor = ok ? GREEN : GRAY;
-        logger.info(TAG
-                + " "
-                + GRAY
-                + "  "
-                + badge
-                + " "
-                + WHITE
-                + label
-                + " "
-                + dotStr
-                + " "
-                + valueColor
-                + detail
-                + RESET);
-    }
+
 
     private static void stateRow(RowState state, String label, String detail) {
         String badge;

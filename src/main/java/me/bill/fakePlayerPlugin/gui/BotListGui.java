@@ -45,7 +45,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 public final class BotListGui implements Listener {
 
     private static final int SIZE = 54;
-    private static final int PER_PAGE = 45;
+    /** Bots per page: centred cards on a backdrop (rows 0-4, 7 per row). */
+    private static final int PER_PAGE = GuiKit.CONTENT_CAPACITY;
     private static final int SLOT_SORT = 45;
     private static final int SLOT_SEARCH = 46;
     private static final int SLOT_SPAWN = 47;
@@ -154,8 +155,10 @@ public final class BotListGui implements Listener {
 
         int start = page * PER_PAGE;
         int end = Math.min(start + PER_PAGE, bots.size());
+        GuiKit.fillContentBackdrop(inv);
+        List<Integer> cardSlots = GuiKit.centeredSlots(end - start);
         for (int i = start; i < end; i++) {
-            inv.setItem(i - start, botHead(bots.get(i)));
+            inv.setItem(cardSlots.get(i - start), botHead(bots.get(i)));
         }
 
         ItemStack filler = GuiKit.glassFiller(Material.GRAY_STAINED_GLASS_PANE);
@@ -171,7 +174,7 @@ public final class BotListGui implements Listener {
         if (Perm.has(player, Perm.SETTINGS)) {
             inv.setItem(SLOT_SETTINGS, settingsItem());
         }
-        inv.setItem(SLOT_CLOSE, closeItem());
+        inv.setItem(SLOT_CLOSE, GuiKit.backOrClose());
 
         player.openInventory(inv);
         startTrackingViewer(uuid);
@@ -193,7 +196,7 @@ public final class BotListGui implements Listener {
 
         if (slot == SLOT_CLOSE) {
             GuiKit.playUiClick(player, 0.8f);
-            player.closeInventory();
+            GuiKit.backOrClose(player);
         } else if (slot == SLOT_SPAWN && (Perm.has(player, Perm.SPAWN) || Perm.has(player, Perm.USER_SPAWN))) {
             GuiKit.playUiClick(player, 1.2f);
             player.performCommand("fpp spawn");
@@ -244,9 +247,11 @@ public final class BotListGui implements Listener {
             pages.put(uuid, page + 1);
             GuiKit.playUiClick(player, 1.0f);
             build(player);
-        } else if (slot >= 0 && slot < PER_PAGE) {
-            int idx = page * PER_PAGE + slot;
-            if (idx < bots.size()) {
+        } else if (slot >= 0 && slot < GuiKit.PER_PAGE) {
+            int onPage = Math.min(PER_PAGE, Math.max(0, bots.size() - page * PER_PAGE));
+            int local = GuiKit.centeredSlots(onPage).indexOf(slot);
+            int idx = local < 0 ? -1 : page * PER_PAGE + local;
+            if (idx >= 0 && idx < bots.size()) {
                 FakePlayer bot = bots.get(idx);
                 GuiKit.playUiClick(player, 1.3f);
                 // Drill into the bot's management GUI (viewer already owns it or is an admin).
@@ -423,14 +428,6 @@ public final class BotListGui implements Listener {
                 Component.empty()
                         .decoration(TextDecoration.ITALIC, false)
                         .append(Component.text("ᴄʟɪᴄᴋ ᴛᴏ ᴄʏᴄʟᴇ").color(GuiKit.DARK_GRAY))));
-        it.setItemMeta(meta);
-        return it;
-    }
-
-    private ItemStack closeItem() {
-        ItemStack it = new ItemStack(Material.BARRIER);
-        ItemMeta meta = it.getItemMeta();
-        meta.displayName(Component.text("ᴄʟᴏꜱᴇ", GuiKit.OFF_RED).decoration(TextDecoration.ITALIC, false));
         it.setItemMeta(meta);
         return it;
     }

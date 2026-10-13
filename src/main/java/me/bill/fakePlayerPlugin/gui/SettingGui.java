@@ -62,7 +62,8 @@ public final class SettingGui implements Listener {
     private static final TextColor COMING_SOON_COLOR = GuiKit.COMING_SOON_COLOR;
 
     private static final int SIZE = 54;
-    private static final int SETTINGS_PER_PAGE = 45;
+    /** Cards per page - laid out centred on a backdrop (the 45-slot grid is only the content area). */
+    private static final int SETTINGS_PER_PAGE = GuiKit.CONTENT_CAPACITY;
     private static final int SLOT_RESET = 45;
     private static final int SLOT_CAT_PREV = 46;
     private static final int SLOT_CAT_NEXT = 52;
@@ -94,7 +95,7 @@ public final class SettingGui implements Listener {
 
     public SettingGui(FakePlayerPlugin plugin) {
         this.plugin = plugin;
-        this.categories = new Category[] {general(), body(), auth(), perf(), debug()};
+        this.categories = new Category[] {general(), body(), chunks(), auth(), perf(), debug()};
 
         if (!AttributionManager.quickAuthorCheck()) {
             // Attribution integrity check failed - silently continuing.
@@ -160,7 +161,21 @@ public final class SettingGui implements Listener {
                 player.performCommand("fpp list");
                 return;
             }
-            player.closeInventory();
+            // Back to the main menu (its open fires this menu's close event, so settings save as usual).
+            GuiKit.backOrClose(player);
+            return;
+        }
+
+        if (slot == GuiKit.SLOT_CONTENT_PREV || slot == GuiKit.SLOT_CONTENT_NEXT) {
+            int total = Math.max(1, (int) Math.ceil(currentTab.entries(player).size() / (double) SETTINGS_PER_PAGE));
+            int target = slot == GuiKit.SLOT_CONTENT_NEXT ? pageIdx + 1 : pageIdx - 1;
+            if (target >= 0 && target < total) {
+                playUiClick(player, 1.0f);
+                state[1] = target;
+                build(player);
+            } else {
+                GuiKit.playError(player);
+            }
             return;
         }
 
@@ -175,9 +190,11 @@ public final class SettingGui implements Listener {
             return;
         }
 
-        int settingIdx = slotToSettingIdx(slot);
+        List<SettingEntry> pageEntries = currentTab.entries(player);
+        int onPage = Math.min(SETTINGS_PER_PAGE, Math.max(0, pageEntries.size() - pageIdx * SETTINGS_PER_PAGE));
+        int settingIdx = GuiKit.centeredSlots(onPage).indexOf(slot);
         if (settingIdx >= 0) {
-            List<SettingEntry> settings = currentTab.entries(player);
+            List<SettingEntry> settings = pageEntries;
             int entryIdx = pageIdx * SETTINGS_PER_PAGE + settingIdx;
             if (entryIdx >= settings.size()) return;
 
@@ -476,8 +493,21 @@ public final class SettingGui implements Listener {
 
         int startIdx = pageIdx * SETTINGS_PER_PAGE;
         int endIdx = Math.min(startIdx + SETTINGS_PER_PAGE, settingsCount);
+        GuiKit.fillContentBackdrop(inv);
+        List<Integer> cardSlots = GuiKit.centeredSlots(endIdx - startIdx);
         for (int i = startIdx; i < endIdx; i++) {
-            inv.setItem(i - startIdx, buildSettingItem(settings.get(i), player));
+            inv.setItem(cardSlots.get(i - startIdx), buildSettingItem(settings.get(i), player));
+        }
+        if (totalPages > 1) {
+            if (pageIdx > 0) {
+                inv.setItem(
+                        GuiKit.SLOT_CONTENT_PREV,
+                        GuiKit.buildPageNavArrow(false, pageIdx, GuiKit.COMING_SOON_COLOR));
+            }
+            if (pageIdx < totalPages - 1) {
+                inv.setItem(
+                        GuiKit.SLOT_CONTENT_NEXT, GuiKit.buildPageNavArrow(true, pageIdx + 2, GuiKit.ON_GREEN));
+            }
         }
 
         inv.setItem(SLOT_RESET, buildResetAllButton());
@@ -500,20 +530,12 @@ public final class SettingGui implements Listener {
                         ? buildCatArrow(true)
                         : glassFiller(Material.GRAY_STAINED_GLASS_PANE));
 
-        inv.setItem(SLOT_CLOSE, buildCloseButton());
+        inv.setItem(SLOT_CLOSE, GuiKit.backOrClose());
 
         pendingRebuild.add(uuid);
         player.openInventory(inv);
         pendingRebuild.remove(uuid);
         sessions.put(uuid, state);
-    }
-
-    private static int slotToSettingIdx(int slot) {
-        return slot < 45 ? slot : -1;
-    }
-
-    private static int settingIdxToSlot(int localIdx) {
-        return localIdx;
     }
 
     private ItemStack buildSettingItem(SettingEntry entry, Player viewer) {
@@ -703,24 +725,6 @@ public final class SettingGui implements Listener {
                 Component.empty()
                         .decoration(TextDecoration.ITALIC, false)
                         .append(Component.text("ᴀʟʟ ᴄᴀᴛᴇɢᴏʀɪᴇꜱ ᴛᴏ ᴅᴇꜰᴀᴜʟᴛꜱ.").color(GRAY))));
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    private ItemStack buildCloseButton() {
-        ItemStack item = new ItemStack(Material.BARRIER);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.empty()
-                .decoration(TextDecoration.ITALIC, false)
-                .append(Component.text("✕  ᴄʟᴏꜱᴇ").color(OFF_RED).decoration(TextDecoration.BOLD, true)));
-        meta.lore(List.of(
-                Component.empty()
-                        .decoration(TextDecoration.ITALIC, false)
-                        .append(Component.text("ᴄʟɪᴄᴋ - ꜱᴀᴠᴇ & ᴄʟᴏꜱᴇ").color(DARK_GRAY)),
-                Component.empty()
-                        .decoration(TextDecoration.ITALIC, false)
-                        .append(Component.text("ꜱʜɪꜰᴛ-ᴄʟɪᴄᴋ - ꜱᴀᴠᴇ & ᴏᴘᴇɴ ᴛʜᴇ ʙᴏᴛ ʟɪꜱᴛ")
-                                .color(DARK_GRAY))));
         item.setItemMeta(meta);
         return item;
     }
@@ -1195,6 +1199,78 @@ public final class SettingGui implements Listener {
                                 "ᴘᴀꜱꜱᴡᴏʀᴅ: ꜱʏᴍʙᴏʟꜱ",
                                 "ɪɴᴄʟᴜᴅᴇ ꜱʏᴍʙᴏʟꜱ (!@#%^&*-_=+).",
                                 Material.PAPER)));
+    }
+
+    private static String sc(String text) {
+        return me.bill.fakePlayerPlugin.util.TextUtil.toSmallCaps(text);
+    }
+
+    /** Chunk loading + the bot's "client options menu" - everything a bot reports to the server about itself. */
+    private Category chunks() {
+        return new Category(
+                "🗺 " + sc("chunks"),
+                Material.GRASS_BLOCK,
+                Material.MAP,
+                Material.LIME_STAINED_GLASS_PANE,
+                List.of(
+                        SettingEntry.toggle(
+                                "chunk-loading.enabled",
+                                sc("chunk loading"),
+                                sc("bots behave like afk players: the server\nloads and ticks chunks around them.\noff = bots report the minimum distance."),
+                                Material.GRASS_BLOCK),
+                        SettingEntry.text(
+                                "chunk-loading.view-distance",
+                                sc("render distance"),
+                                sc("chunks each bot reports, like a client's\nvideo setting. auto = server view\ndistance, 0 = minimum, max 32."),
+                                Material.SPYGLASS),
+                        SettingEntry.cycleInt(
+                                "chunk-loading.update-interval",
+                                sc("update interval (ticks)"),
+                                sc("how often each bot's options are\nre-synced with the server."),
+                                Material.CLOCK,
+                                new int[] {10, 20, 40, 100, 200}),
+                        SettingEntry.cycleInt(
+                                "chunk-loading.mass-disable-threshold",
+                                sc("mass threshold (bots)"),
+                                sc("at this many active bots every bot drops\nto the mass render distance. 0 = never."),
+                                Material.HOPPER,
+                                new int[] {0, 25, 50, 100, 200, 500}),
+                        SettingEntry.cycleInt(
+                                "chunk-loading.mass-view-distance",
+                                sc("mass render distance"),
+                                sc("render distance used while the mass\nthreshold is reached."),
+                                Material.COMPASS,
+                                new int[] {2, 3, 4, 6, 8}),
+                        SettingEntry.text(
+                                "bot-client.language",
+                                sc("language"),
+                                sc("locale each bot reports (en_us, de_de…)."),
+                                Material.WRITABLE_BOOK),
+                        SettingEntry.text(
+                                "bot-client.main-hand",
+                                sc("main hand"),
+                                sc("right or left. the bot's model\nreports this to every viewer."),
+                                Material.IRON_SWORD),
+                        SettingEntry.text(
+                                "bot-client.skin-parts",
+                                sc("skin layers"),
+                                sc("all, none, or a 0-127 bitmask\n(cape 1, jacket 2, sleeves 4/8,\npants 16/32, hat 64)."),
+                                Material.LEATHER_CHESTPLATE),
+                        SettingEntry.text(
+                                "bot-client.particles",
+                                sc("particles"),
+                                sc("all, decreased or minimal."),
+                                Material.FIREWORK_STAR),
+                        SettingEntry.text(
+                                "bot-client.chat-visibility",
+                                sc("chat visibility"),
+                                sc("full, system or hidden."),
+                                Material.PAPER),
+                        SettingEntry.toggle(
+                                "bot-client.allow-server-listings",
+                                sc("server listings"),
+                                sc("whether bots may appear in the\nserver list's player sample."),
+                                Material.NAME_TAG)));
     }
 
     private Category perf() {

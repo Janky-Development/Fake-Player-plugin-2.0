@@ -154,19 +154,7 @@ public final class FppScheduler {
         return register(task);
     }
 
-    public static int runSyncRepeatingWithIdAtEntity(
-            Plugin plugin, Entity entity, Runnable runnable, long delayTicks, long periodTicks) {
-        if (entity == null || cannotSchedule(plugin)) return -1;
-        String section = plugin instanceof FakePlayerPlugin ? "scheduler.runSyncRepeatingAtEntity" : null;
-        ScheduledTask task = entity.getScheduler()
-                .runAtFixedRate(
-                        plugin,
-                        ignored -> profileRun(section, runnable),
-                        null,
-                        normalizeDelay(delayTicks),
-                        normalizePeriod(periodTicks));
-        return register(task);
-    }
+
 
     private static boolean isFolia() {
         try {

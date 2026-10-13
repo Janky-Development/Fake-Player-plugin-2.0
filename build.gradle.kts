@@ -20,7 +20,7 @@ tasks.compileJava {
 }
 
 group = "me.bill.fpp"
-version = "2.1.0"
+version = "2.1.5"
 
 repositories {
     mavenCentral()
@@ -35,11 +35,6 @@ dependencies {
     paperweight.paperDevBundle("26.1.2.build.65-stable")
 
     implementation("dev.faststats.metrics:bukkit:0.22.0")
-
-    // Pathetic - async A* pathfinding engine backing FakePlayerManager's bot navigation.
-    // https://github.com/bsommerfeld/pathetic
-    implementation("de.bsommerfeld.pathetic:engine:5.5.2")
-    implementation("de.bsommerfeld.pathetic:api:5.5.2")
 
     compileOnly("me.clip:placeholderapi:2.12.2")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.12") {
@@ -56,8 +51,6 @@ dependencies {
     // compat.nlogin.NLoginIntegration: it resolves nLogin's API entirely through reflection at
     // runtime instead, so this build has nothing to depend on and nothing to add here.
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.shadowJar {
@@ -65,10 +58,6 @@ tasks.shadowJar {
     manifest {
         attributes["Main-Class"] = "me.bill.fakePlayerPlugin.Launcher"
     }
-}
-
-tasks.test {
-    useJUnitPlatform()
 }
 
 tasks.runServer {

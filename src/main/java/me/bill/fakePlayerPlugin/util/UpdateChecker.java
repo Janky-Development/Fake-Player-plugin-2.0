@@ -5,8 +5,6 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,24 +55,7 @@ public final class UpdateChecker {
         });
     }
 
-    public static UpdateInfo checkBlocking(Plugin plugin, long timeoutMs) {
-        if (!Config.updateCheckerEnabled()) {
-            Config.debug("Update checker disabled in config.");
-            return null;
-        }
-        final UpdateInfo[] out = {null};
-        CountDownLatch latch = new CountDownLatch(1);
-        FppScheduler.runAsync(plugin, () -> {
-            out[0] = fetchOrCached(plugin);
-            latch.countDown();
-        });
-        try {
-            if (latch.await(Math.max(100, timeoutMs), TimeUnit.MILLISECONDS)) return out[0];
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        return null;
-    }
+
 
     public static void handleResultOnMainThread(Plugin plugin, UpdateInfo info) {
         if (info == null) return;
@@ -481,27 +462,6 @@ public final class UpdateChecker {
             if (firstJar == null) firstJar = f;
         }
         return firstJar;
-    }
-
-    private static String extractFirstArrayElement(String body) {
-        String trimmed = body.trim();
-        if (!trimmed.startsWith("[")) return null;
-        int start = trimmed.indexOf('{');
-        if (start < 0) return null;
-        int end = findMatchingBrace(trimmed, start);
-        return end > start ? trimmed.substring(start, end + 1) : null;
-    }
-
-    private static String extractFirstFileUrl(String obj) {
-        int filesIdx = obj.indexOf("\"files\"");
-        if (filesIdx < 0) return null;
-        int arrStart = obj.indexOf('[', filesIdx);
-        if (arrStart < 0) return null;
-        int objStart = obj.indexOf('{', arrStart);
-        if (objStart < 0) return null;
-        int objEnd = findMatchingBrace(obj, objStart);
-        if (objEnd <= objStart) return null;
-        return extractJsonString(obj.substring(objStart, objEnd + 1), "url");
     }
 
     private static String extractVersion(String body) {

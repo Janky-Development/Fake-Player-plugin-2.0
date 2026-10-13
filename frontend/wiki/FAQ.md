@@ -98,15 +98,18 @@ bot limit, ownership, cooldown) needs a real player and isn't usable from consol
 ## Tasks, Combat & Pathfinding
 
 ### Q: How do I make a bot fight mobs?
-**A:** Open its settings (shift+right-click the bot or click it in `/fpp list`) → `🗡 ᴘᴠᴇ` → set
-**ꜱᴍᴀʀᴛ ᴀᴛᴛᴀᴄᴋ** to "on" (attack in reach) or "on with movement" (chase via pathfinding). Pick
-target mob types, detect range, and priority there too. The **ᴘᴠᴇ ꜱᴛᴀᴛᴜꜱ** tile shows the live
-state (off / scanning / fighting).
+**A:** One line: `/fpp attack <bot>` makes it guard its post and hit hostile mobs that come into reach
+(an AFK mob farm); `/fpp attack <bot> --chase --range 16` hunts them through pathfinding and returns to
+its post afterwards. Narrow it with `--mobs zombie,skeleton`, `--priority lowest-health`, or use `--any`;
+`/fpp attack <bot> --status` shows what it is fighting. The same settings live in the bot's `🗡 ᴘᴠᴇ` GUI
+page and persist across restarts. Hits are real client attacks (crosshair pick, full attack charge, best
+weapon auto-equipped), so damage, cooldowns and enchantments are the server's own.
 
 ### Q: Can I make bots pathfind to coordinates or follow players?
 **A:** Yes - `/fpp move <bot> --to <bot|player>` follows a target live, and
 `/fpp move <bot> --coords <x> <y> <z> [world]` walks to a fixed point. Both are backed by the
-core Pathetic A* engine.
+built-in A* pathfinder, which also climbs, swims, opens doors and - when enabled for the bot - parkours,
+digs and builds.
 
 ### Q: Bot is stuck and won't move.
 **A:** The pathfinder auto-recalculates when stuck, and abandons a target after a few fruitless
@@ -115,9 +118,24 @@ cycles (`pathfinding.max-stuck-cycles`). Enable the `pathfinding` debug topic fo
 cancels everything manually.
 
 ### Q: How does `/fpp find` work?
-**A:** Search → path → mine loops: it auto-equips the best tool from the bot's inventory, gives up
-on unreachable/unbreakable blocks instead of looping, and when inventory runs low it deposits into
-the bot's nearest registered storage (`/fpp storage`) before resuming.
+**A:** It looks for blocks the bot could actually *see* - ones with an exposed face - ranks them by
+walking effort, walks there, mines with the real client dig logic, and keeps following the vein as it
+opens up. Buried ore is never detected (it is not X-ray); use `--scan` to see what is visible. It
+auto-equips the best tool, skips unreachable blocks, and when the inventory runs low it deposits into the
+nearest registered storage (`/fpp storage`) before resuming. Accepts lists and aliases:
+`/fpp find bot ores`, `/fpp find bot oak_log,birch_log`.
+
+### Q: How do I clear out a whole chunk or area?
+**A:** `/fpp clear <bot>` clears the chunk the bot stands in, layer by layer from the surface down; use
+`--area x1 y1 z1 x2 y2 z2`, `--selection` (WorldEdit) or `--radius n` for other shapes, and
+`--depth n`/`--bottom y` to limit how far down it goes. It runs on its own: it digs inside the region
+only, seals water/lava, collects drops, deposits at a registered storage (or `--trash` junk), recovers
+when stuck and builds up with scaffold blocks if it must. Check `/fpp clear <bot> --status`.
+
+### Q: Can a bot start working the moment it spawns?
+**A:** Yes - add an action to the spawn command: `/fpp spawn --name Guard attack --chase`,
+`/fpp spawn --count 3 --preset guard`, `/fpp spawn --name Miner clear --chunk then wait 30s attack`.
+Presets live under `spawn-actions.presets`.
 
 ### Q: Can a bot do two things at once (mine and fight, walk and use)?
 **A:** Yes. Starting a new task (`move` / `find` / `left-click` / `right-click` / `attack`) no longer
@@ -189,7 +207,8 @@ regardless of what `rentalExpiresAt` they were given.
 
 ### Q: Server lag with many bots.
 **A:**
-- Lower `chunk-loading.radius` or set `mass-disable-threshold` lower
+- Lower `chunk-loading.view-distance` or set `mass-disable-threshold` lower (bots then report a smaller
+  render distance; the server's own chunk system does the rest)
 - Reduce `head-ai.tick-rate`
 - Increase `performance.position-sync-distance` (or set to `128`)
 - Reduce bot count or spawn in batches

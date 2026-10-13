@@ -94,9 +94,7 @@ public final class BackupManager {
         return Collections.unmodifiableList(names);
     }
 
-    public static long totalBackupSizeBytes(FakePlayerPlugin plugin) {
-        return dirSize(new File(plugin.getDataFolder(), "backup"));
-    }
+
 
     private static File createBackupDir(FakePlayerPlugin plugin, String reason) {
         String safeReason = reason.replaceAll("[^a-zA-Z0-9_-]", "_");

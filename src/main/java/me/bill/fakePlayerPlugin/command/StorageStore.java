@@ -185,10 +185,7 @@ public final class StorageStore {
         return count;
     }
 
-    public int getStorageCount(String botName) {
-        LinkedHashMap<String, StoragePoint> botMap = storages.get(botName.toLowerCase(Locale.ROOT));
-        return botMap != null ? botMap.size() : 0;
-    }
+
 
     public int renameBot(String oldName, String newName) {
         String oldKey = oldName.toLowerCase(Locale.ROOT);

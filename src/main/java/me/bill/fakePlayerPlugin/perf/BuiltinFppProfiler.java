@@ -81,10 +81,6 @@ public final class BuiltinFppProfiler implements FppProfiler {
         benchmarkStartedAt.set(0);
     }
 
-    public boolean isBenchmarking() {
-        return benchmarkMode.get();
-    }
-
     public long benchmarkElapsedSeconds() {
         long start = benchmarkStartedAt.get();
         if (start <= 0) return 0;

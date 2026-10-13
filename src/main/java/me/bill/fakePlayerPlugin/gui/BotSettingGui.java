@@ -346,7 +346,7 @@ public final class BotSettingGui implements Listener {
                 catOffset + CAT_WINDOW < all.size()
                         ? buildCatArrow(true)
                         : glassFiller(Material.GRAY_STAINED_GLASS_PANE));
-        inv.setItem(SLOT_CLOSE, buildCloseButton());
+        inv.setItem(SLOT_CLOSE, buildBackButton(player));
 
         pendingRebuild.add(uuid);
         player.openInventory(inv);
@@ -435,8 +435,12 @@ public final class BotSettingGui implements Listener {
         }
         if (slot == SLOT_CLOSE) {
             playUiClick(player, 0.8f);
-            if (event.isShiftClick() && Perm.has(player, Perm.LIST)) {
-                // Back to the bot list instead of closing outright.
+            if (event.isShiftClick() && GuiKit.hasMainMenu()) {
+                GuiKit.openMainMenu(player);
+                return;
+            }
+            if (Perm.has(player, Perm.LIST)) {
+                // Back to the bot list rather than closing outright.
                 player.performCommand("fpp list");
                 return;
             }
@@ -2152,6 +2156,31 @@ public final class BotSettingGui implements Listener {
                 Component.empty()
                         .decoration(TextDecoration.ITALIC, false)
                         .append(Component.text("ᴛᴏ ᴅᴇꜰᴀᴜʟᴛ ᴠᴀʟᴜᴇꜱ.").color(GRAY))));
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    /** Main-screen footer button: back to the bot list (or close without list access); shift = main menu. */
+    private ItemStack buildBackButton(Player viewer) {
+        boolean toList = Perm.has(viewer, Perm.LIST);
+        ItemStack item = new ItemStack(toList ? Material.SPECTRAL_ARROW : Material.BARRIER);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(Component.text(toList ? "◄  ʙᴀᴄᴋ ᴛᴏ ʙᴏᴛ ʟɪꜱᴛ" : "✕  ᴄʟᴏꜱᴇ")
+                        .color(toList ? ACCENT : OFF_RED)
+                        .decoration(TextDecoration.BOLD, true)));
+        List<Component> lore = new ArrayList<>();
+        lore.add(Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(Component.text(toList ? "ᴄʟɪᴄᴋ - ʙᴀᴄᴋ ᴛᴏ ᴛʜᴇ ʙᴏᴛ ʟɪꜱᴛ" : "ᴄʟɪᴄᴋ - ᴄʟᴏꜱᴇ ᴛʜᴇ ᴍᴇɴᴜ")
+                        .color(DARK_GRAY)));
+        if (GuiKit.hasMainMenu()) {
+            lore.add(Component.empty()
+                    .decoration(TextDecoration.ITALIC, false)
+                    .append(Component.text("ꜱʜɪꜰᴛ-ᴄʟɪᴄᴋ - ᴍᴀɪɴ ᴍᴇɴᴜ").color(DARK_GRAY)));
+        }
+        meta.lore(lore);
         item.setItemMeta(meta);
         return item;
     }

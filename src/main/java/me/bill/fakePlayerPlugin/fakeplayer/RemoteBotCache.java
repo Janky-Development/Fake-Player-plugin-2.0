@@ -2,7 +2,6 @@ package me.bill.fakePlayerPlugin.fakeplayer;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -48,27 +47,15 @@ public final class RemoteBotCache {
         serverRealPlayerCounts.put(serverId, Math.max(0, count));
     }
 
-    public int getServerRealPlayerCount(String serverId) {
-        return serverRealPlayerCounts.getOrDefault(serverId, 0);
-    }
 
-    public Map<String, Integer> getAllServerRealPlayerCounts() {
-        return Collections.unmodifiableMap(new ConcurrentHashMap<>(serverRealPlayerCounts));
-    }
 
-    public int totalRealPlayersAcrossNetwork() {
-        return serverRealPlayerCounts.values().stream()
-                .mapToInt(Integer::intValue)
-                .sum();
-    }
 
-    public int totalBotsAcrossNetwork() {
-        return entries.size();
-    }
 
-    public int totalPlayersAcrossNetwork() {
-        return totalRealPlayersAcrossNetwork() + totalBotsAcrossNetwork();
-    }
+
+
+
+
+
 
     // ── Proxy-pushed totals ────────────────────────────────────────────────────
 

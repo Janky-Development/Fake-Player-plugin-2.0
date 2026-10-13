@@ -63,6 +63,13 @@ invalid-number: "{prefix}<#FF6A5C>ɪɴᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ. ᴘʟᴇᴀ
 # {count} - bots spawned  |  {total} - total active  |  {name} - bot name
 # {max}   - global cap    |  {limit} - personal limit
 spawn-success:            "{prefix}<#A78BFA>{count}</#A78BFA> <#9691AB>ꜰᴀᴋᴇ ᴘʟᴀʏᴇʀ(ꜱ) <#EEECF7>ꜱᴜᴍᴍᴏɴᴇᴅ<#9691AB>. <#5F5B73>(<#A78BFA>{total}</#A78BFA> <#9691AB>ᴀᴄᴛɪᴠᴇ<#5F5B73>)"
+spawn-actions-queued: "{prefix}<#9691AB><#A78BFA>{name}</#A78BFA><#9691AB> ᴡɪʟʟ ꜱᴛᴀʀᴛ <#A78BFA>{actions}</#A78BFA><#9691AB> ᴡʜᴇɴ ɪᴛ ɪꜱ ᴏɴʟɪɴᴇ."
+spawn-action-unknown: "{prefix}<#FF6A5C>ᴜɴᴋɴᴏᴡɴ ꜱᴘᴀᴡɴ ᴀᴄᴛɪᴏɴ <#A78BFA>{action}</#A78BFA><#FF6A5C>. ᴜꜱᴇ: attack, move, find, left-click, right-click, storage, sneak, freeze."
+spawn-action-denied: "{prefix}<#FF6A5C>ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ꜰᴏʀ <#A78BFA>{action}</#A78BFA><#FF6A5C>."
+spawn-action-bad-duration: "{prefix}<#FF6A5C>ɪɴᴠᴀʟɪᴅ ᴅᴜʀᴀᴛɪᴏɴ <#A78BFA>{value}</#A78BFA><#FF6A5C>. ᴜꜱᴇ 10t, 5s, 2m."
+spawn-action-unknown-preset: "{prefix}<#FF6A5C>ᴜɴᴋɴᴏᴡɴ ꜱᴘᴀᴡɴ ᴘʀᴇꜱᴇᴛ <#A78BFA>{preset}</#A78BFA><#FF6A5C>."
+spawn-invalid-count: "{prefix}<#FF6A5C>--count ᴍᴜꜱᴛ ʙᴇ ʙᴇᴛᴡᴇᴇɴ 1 ᴀɴᴅ <#A78BFA>{max}</#A78BFA><#FF6A5C>."
+spawn-actions-disabled: "{prefix}<#FF6A5C>ꜱᴘᴀᴡɴ ᴀᴄᴛɪᴏɴꜱ ᴀʀᴇ ᴅɪꜱᴀʙʟᴇᴅ ɪɴ ᴛʜᴇ ᴄᴏɴꜰɪɢ."
 spawn-max-reached:        "{prefix}<#FF6A5C>ᴍᴀx ʙᴏᴛ ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ <#5F5B73>(<#A78BFA>{max}</#A78BFA> <#9691AB>ʙᴏᴛꜱ<#5F5B73>)<#FF6A5C>. ᴅᴇʟᴇᴛᴇ ꜱᴏᴍᴇ ꜰɪʀꜱᴛ."
 spawn-user-limit-reached: "{prefix}<#FF6A5C>ʏᴏᴜ'ᴠᴇ ʀᴇᴀᴄʜᴇᴅ ʏᴏᴜʀ ᴘᴇʀꜱᴏɴᴀʟ ʙᴏᴛ ʟɪᴍɪᴛ <#5F5B73>(<#A78BFA>{limit}</#A78BFA> <#9691AB>ʙᴏᴛ(ꜱ)<#5F5B73>)<#FF6A5C>."
 spawn-no-names-left:      "{prefix}<#FF6A5C>ᴀʟʟ ɴᴀᴍᴇꜱ ɪɴ ᴛʜᴇ ᴘᴏᴏʟ ᴀʀᴇ ɪɴ ᴜꜱᴇ. <#9691AB>ʀᴇᴅᴜᴄᴇ ᴀᴄᴛɪᴠᴇ ʙᴏᴛꜱ ᴏʀ ᴀᴅᴅ ᴍᴏʀᴇ ɴᴀᴍᴇꜱ."
@@ -255,6 +262,27 @@ find-stopped-all:     "{prefix}<#9691AB>ꜱᴛᴏᴘᴘᴇᴅ ᴀʟʟ ʙᴏᴛ�
 find-finished:        "{prefix}<#9691AB><#A78BFA>{name}</#A78BFA><#9691AB> ꜰɪɴɪꜱʜᴇᴅ - ᴍɪɴᴇᴅ <#EEECF7>{count}</#EEECF7><#9691AB> <#EEECF7>{block}</#EEECF7><#9691AB> ʙʟᴏᴄᴋ(ꜱ)<#9691AB>."
 find-none-found:      "{prefix}<#9691AB><#A78BFA>{name}</#A78BFA><#9691AB> ᴄᴏᴜʟᴅ ɴᴏᴛ ꜰɪɴᴅ ᴀɴʏ <#EEECF7>{block}</#EEECF7><#9691AB> ɴᴇᴀʀʙʏ."
 find-depositing:      "{prefix}<#9691AB><#A78BFA>{name}</#A78BFA><#9691AB> ɪɴᴠᴇɴᴛᴏʀʏ ɪꜱ ꜰᴜʟʟ - ᴅᴇᴘᴏꜱɪᴛɪɴɢ ᴀᴛ <#EEECF7>{storage}</#EEECF7><#9691AB>, ᴡɪʟʟ ʀᴇꜱᴜᴍᴇ ᴀꜰᴛᴇʀ."
+find-scan-result:    "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ꜱᴇᴇꜱ <#EEECF7>{count}</#EEECF7> <#A78BFA>{block}</#A78BFA><#9691AB> ᴡɪᴛʜɪɴ <#EEECF7>{radius}</#EEECF7><#9691AB> - ɴᴇᴀʀᴇꜱᴛ ᴀᴛ <#EEECF7>{x} {y} {z}</#EEECF7> <#5F5B73>({hazards} ɴᴇᴀʀ ʟᴀᴠᴀ)"
+find-scan-none:      "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ᴄᴀɴ'ᴛ ꜱᴇᴇ ᴀɴʏ <#A78BFA>{block}</#A78BFA><#9691AB> ᴡɪᴛʜɪɴ <#EEECF7>{radius}</#EEECF7><#9691AB> (ʙᴜʀɪᴇᴅ ʙʟᴏᴄᴋꜱ ᴀʀᴇ ɴᴏᴛ ᴅᴇᴛᴇᴄᴛᴇᴅ)."
+clear-usage: "{prefix}<#FF6A5C>ᴜꜱᴀɢᴇ<#9691AB>: <#A78BFA>/fpp clear <bot> [--chunk [cx cz] | --area x1 y1 z1 x2 y2 z2 | --selection | --radius n] [--top y] [--bottom y | --depth n] [--keep blocks] [--trash [blocks]] [--containers] [--tunnel] [--no-build] [--no-seal]</#A78BFA><#9691AB> | <#A78BFA>/fpp clear <bot> --status|--stop</#A78BFA><#9691AB>."
+clear-not-found: "{prefix}<#FF6A5C>ʙᴏᴛ <#A78BFA>{name}</#A78BFA><#FF6A5C> ᴅᴏᴇꜱ ɴᴏᴛ ᴇxɪꜱᴛ."
+clear-bot-offline: "{prefix}<#A78BFA>{name}</#A78BFA><#FF6A5C> ʜᴀꜱ ɴᴏ ᴀᴄᴛɪᴠᴇ ʙᴏᴅʏ."
+clear-started: "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ꜱᴛᴀʀᴛᴇᴅ ᴄʟᴇᴀʀɪɴɢ <#EEECF7>{cells}</#EEECF7><#9691AB> ʙʟᴏᴄᴋꜱ (<#EEECF7>{layers}</#EEECF7><#9691AB> ʟᴀʏᴇʀꜱ, y <#EEECF7>{top}</#EEECF7><#9691AB>→<#EEECF7>{bottom}</#EEECF7><#9691AB>, x {x1}..{x2}, z {z1}..{z2})."
+clear-layer-done: "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ꜰɪɴɪꜱʜᴇᴅ ʟᴀʏᴇʀ <#EEECF7>{layer}</#EEECF7><#9691AB> - <#EEECF7>{mined}</#EEECF7><#9691AB> ʙʟᴏᴄᴋꜱ ᴍɪɴᴇᴅ."
+clear-finished: "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ꜰɪɴɪꜱʜᴇᴅ ᴄʟᴇᴀʀɪɴɢ: <#EEECF7>{mined}</#EEECF7><#9691AB> ʙʟᴏᴄᴋꜱ, <#EEECF7>{layers}</#EEECF7><#9691AB> ʟᴀʏᴇʀꜱ, {skipped} ꜱᴋɪᴘᴘᴇᴅ, {sealed} ꜱᴇᴀʟᴇᴅ, {trashed} ᴅɪꜱᴄᴀʀᴅᴇᴅ."
+clear-ended: "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ᴇɴᴅᴇᴅ ᴛʜᴇ ᴄʟᴇᴀʀ ᴇᴀʀʟʏ: <#EEECF7>{mined}</#EEECF7><#9691AB> ʙʟᴏᴄᴋꜱ, <#EEECF7>{layers}</#EEECF7><#9691AB> ʟᴀʏᴇʀꜱ, {skipped} ꜱᴋɪᴘᴘᴇᴅ."
+clear-stopped: "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ꜱᴛᴏᴘᴘᴇᴅ ᴄʟᴇᴀʀɪɴɢ."
+clear-stopped-all: "{prefix}<#9691AB>ꜱᴛᴏᴘᴘᴇᴅ ᴀʟʟ ᴄʟᴇᴀʀ ᴊᴏʙꜱ."
+clear-stuck: "{prefix}<#FF6A5C>{name}</#FF6A5C><#9691AB> ɪꜱ ꜱᴛᴜᴄᴋ - ʀᴇ-ᴀɴᴄʜᴏʀɪɴɢ ᴀɴᴅ ʙᴜɪʟᴅɪɴɢ ᴜᴘ ɪꜰ ɴᴇᴇᴅᴇᴅ."
+clear-gave-up: "{prefix}<#FF6A5C>{name}</#FF6A5C><#9691AB> ɢᴀᴠᴇ ᴜᴘ - ᴛᴏᴏ ᴍᴀɴʏ ꜱᴛᴜᴄᴋ ʀᴇᴄᴏᴠᴇʀɪᴇꜱ."
+clear-inventory-full: "{prefix}<#FF6A5C>{name}</#FF6A5C><#9691AB>'ꜱ ɪɴᴠᴇɴᴛᴏʀʏ ɪꜱ ꜰᴜʟʟ ᴀɴᴅ ɴᴏ ꜱᴛᴏʀᴀɢᴇ ɪꜱ ᴀᴠᴀɪʟᴀʙʟᴇ - ꜱᴛᴏᴘᴘᴇᴅ. ᴜꜱᴇ --trash ᴏʀ ʀᴇɢɪꜱᴛᴇʀ ᴀ ꜱᴛᴏʀᴀɢᴇ."
+clear-no-entry: "{prefix}<#FF6A5C>{name}</#FF6A5C><#9691AB> ᴄᴀɴ'ᴛ ꜰɪɴᴅ ᴀ ᴡᴀʏ ɪɴᴛᴏ ᴛʜᴇ ᴀʀᴇᴀ. ᴛʀʏ --tunnel."
+clear-invalid-area: "{prefix}<#FF6A5C>ᴛʜᴀᴛ ᴀʀᴇᴀ ʜᴀꜱ ɴᴏ ᴠᴀʟɪᴅ ʜᴇɪɢʜᴛ ʀᴀɴɢᴇ."
+clear-too-large: "{prefix}<#FF6A5C>ᴛʜᴀᴛ ᴀʀᴇᴀ ɪꜱ <#EEECF7>{cells}</#EEECF7><#FF6A5C> ʙʟᴏᴄᴋꜱ - ᴍᴀx ɪꜱ <#EEECF7>{max}</#EEECF7><#FF6A5C>."
+clear-not-loaded: "{prefix}<#FF6A5C>ᴄʜᴜɴᴋ <#EEECF7>{x},{z}</#EEECF7><#FF6A5C> ɪꜱ ɴᴏᴛ ʟᴏᴀᴅᴇᴅ."
+clear-no-selection: "{prefix}<#FF6A5C>ɴᴏ ᴡᴏʀʟᴅᴇᴅɪᴛ ꜱᴇʟᴇᴄᴛɪᴏɴ ꜰᴏᴜɴᴅ ɪɴ ᴛʜɪꜱ ᴡᴏʀʟᴅ."
+clear-status: "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ʟᴀʏᴇʀ <#EEECF7>{layer}</#EEECF7><#9691AB> ({done}/{total}), <#EEECF7>{mined}</#EEECF7><#9691AB> ᴍɪɴᴇᴅ, {left} ʟᴇꜰᴛ ɪɴ ʟᴀʏᴇʀ, {skipped} ꜱᴋɪᴘᴘᴇᴅ."
+clear-status-idle: "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ɪꜱ ɴᴏᴛ ᴄʟᴇᴀʀɪɴɢ."
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -364,7 +392,7 @@ version-unsupported-admin: "<#2A2735><st>━━━━━━━━━</st> <bold>
 # ═════════════════════════════════════════════════════════════════════════════
 
 # {name} - bot display name
-attack-usage:        "{prefix}<#FF6A5C>ᴜꜱᴀɢᴇ<#9691AB>: <#A78BFA>/fpp attack <bot|all> [--once|--stop]</#A78BFA><#9691AB> | <#A78BFA>/fpp attack --stop</#A78BFA><#9691AB>."
+attack-usage:        "{prefix}<#FF6A5C>ᴜꜱᴀɢᴇ<#9691AB>: <#A78BFA>/fpp attack <bot|--all> [--stand|--chase] [--hostile|--any|--mobs <types>] [--range <n>] [--priority nearest|lowest-health] [--once]</#A78BFA><#9691AB> | <#A78BFA>/fpp attack <bot> --status</#A78BFA><#9691AB> | <#A78BFA>/fpp attack --stop</#A78BFA><#9691AB>."
 attack-not-found:    "{prefix}<#FF6A5C>ʙᴏᴛ <#A78BFA>{name}</#A78BFA><#FF6A5C> ᴅᴏᴇꜱ ɴᴏᴛ ᴇxɪꜱᴛ."
 attack-bot-offline:  "{prefix}<#FF6A5C><#A78BFA>{name}</#A78BFA><#FF6A5C> ʜᴀꜱ ɴᴏ ᴀᴄᴛɪᴠᴇ ᴘʟᴀʏᴇʀ ʙᴏᴅʏ."
 attack-started:      "{prefix}<#9691AB><#A78BFA>{name}</#A78BFA><#9691AB> ꜱᴛᴀʀᴛᴇᴅ ᴀᴛᴛᴀᴄᴋɪɴɢ ᴄᴏɴᴛɪɴᴜᴏᴜꜱʟʏ."
@@ -373,6 +401,11 @@ attack-stopped:      "{prefix}<#9691AB><#A78BFA>{name}</#A78BFA><#9691AB> ꜱᴛ
 attack-stopped-all:  "{prefix}<#9691AB>ꜱᴛᴏᴘᴘᴇᴅ ᴀʟʟ ʙᴏᴛꜱ ꜰʀᴏᴍ ᴀᴛᴛᴀᴄᴋɪɴɢ."
 attack-no-bots:      "{prefix}<#FF6A5C>ɴᴏ ᴀᴄᴛɪᴠᴇ ʙᴏᴛꜱ ꜰᴏᴜɴᴅ."
 attack-started-all:  "{prefix}<#9691AB><#A78BFA>{count}</#A78BFA><#9691AB> ʙᴏᴛꜱ ꜱᴛᴀʀᴛᴇᴅ ᴀᴛᴛᴀᴄᴋɪɴɢ."
+attack-started-config: "{prefix}<#9691AB><#A78BFA>{name}</#A78BFA><#9691AB> ɪꜱ ᴏɴ ᴅᴜᴛʏ <#5F5B73>•</#5F5B73> <#A78BFA>{mode}</#A78BFA><#9691AB>, ʀᴀɴɢᴇ <#A78BFA>{range}</#A78BFA><#9691AB>, ᴛᴀʀɢᴇᴛꜱ <#A78BFA>{targets}</#A78BFA><#9691AB>."
+attack-status-on:    "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ꜰɪɢʜᴛɪɴɢ <#5F5B73>•</#5F5B73> <#A78BFA>{mode}</#A78BFA><#9691AB>, ʀᴀɴɢᴇ <#A78BFA>{range}</#A78BFA><#9691AB>, ᴛᴀʀɢᴇᴛꜱ <#A78BFA>{targets}</#A78BFA><#9691AB>, ᴄᴜʀʀᴇɴᴛ ᴛᴀʀɢᴇᴛ <#A78BFA>{target}</#A78BFA><#9691AB>."
+attack-status-off:   "{prefix}<#A78BFA>{name}</#A78BFA><#9691AB> ɪꜱ ɴᴏᴛ ꜰɪɢʜᴛɪɴɢ."
+attack-unknown-mob:  "{prefix}<#FF6A5C>ᴜɴᴋɴᴏᴡɴ ᴍᴏʙ ᴛʏᴘᴇ <#A78BFA>{type}</#A78BFA><#FF6A5C>."
+attack-invalid-range: "{prefix}<#FF6A5C>ʀᴀɴɢᴇ ᴍᴜꜱᴛ ʙᴇ ʙᴇᴛᴡᴇᴇɴ 1 ᴀɴᴅ <#A78BFA>{max}</#A78BFA><#FF6A5C>."
 # ═════════════════════════════════════════════════════════════════════════════
 #  24 · STOP COMMAND  (/fpp stop)
 # ═════════════════════════════════════════════════════════════════════════════
@@ -452,7 +485,7 @@ pathdebug-mine-stall:    "{prefix}<#BAFF4F>[ᴘᴀᴛʜ] <#A78BFA>{name}</#A78BF
 # ───────────────────────────────────────────────────────────────────────────────
 #  ECONOMY / RENTAL - /fpp rent buy|extend|info|give|clear
 # ───────────────────────────────────────────────────────────────────────────────
-rent-usage: "{prefix}<#FF6A5C>ᴜꜱᴀɢᴇ<#9691AB>: <#A78BFA>/fpp rent buy <hours> | extend <bot> <hours> | info [bot] | give <player> <bot|--new> <hours></#A78BFA><#9691AB>."
+rent-usage: "{prefix}<#FF6A5C>ᴜꜱᴀɢᴇ<#9691AB>: <#A78BFA>/fpp rent [gui] | buy <hours> | extend <bot> <hours> | packages | package <id> [bot|--for <player>] | quote <hours> [--new] | info [bot] | auto <bot> <on [hours]|off> | list [player] | give <player> <bot|--new> <hours> | clear <bot></#A78BFA><#9691AB>."
 # {value}
 rent-invalid-hours: "{prefix}<#FF6A5C>'{value}' ɪꜱ ɴᴏᴛ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ ᴏꜰ ʜᴏᴜʀꜱ."
 # {min}, {max}
@@ -485,6 +518,18 @@ rent-given: "{prefix}<#9691AB>ɢᴀᴠᴇ <#A78BFA>{player}</#A78BFA> <#EEECF7>{
 rent-received: "{prefix}<#9691AB>ʏᴏᴜ ʀᴇᴄᴇɪᴠᴇᴅ <#EEECF7>{hours}ʜ</#EEECF7> <#9691AB>ᴏɴ <#A78BFA>{name}</#A78BFA><#9691AB> - <#EEECF7>{remaining}</#EEECF7> <#9691AB>ʀᴇᴍᴀɪɴɪɴɢ."
 # {name}
 rent-cleared: "{prefix}<#A78BFA>{name}</#A78BFA> <#9691AB>ɪꜱ ɴᴏ ʟᴏɴɢᴇʀ ʀᴇɴᴛᴇᴅ - ɪᴛ ᴡɪʟʟ ɴᴇᴠᴇʀ ᴇxᴘɪʀᴇ."
+rent-cancelled: "{prefix}<#FF6A5C>ᴛʜᴇ ᴘᴜʀᴄʜᴀꜱᴇ ᴡᴀꜱ ᴄᴀɴᴄᴇʟʟᴇᴅ. ɴᴏᴛʜɪɴɢ ᴡᴀꜱ ᴄʜᴀʀɢᴇᴅ."
+rent-package-unknown: "{prefix}<#FF6A5C>ᴜɴᴋɴᴏᴡɴ ʀᴇɴᴛᴀʟ ᴘᴀᴄᴋᴀɢᴇ <#A78BFA>{id}</#A78BFA><#FF6A5C>."
+rent-package-denied: "{prefix}<#FF6A5C>ʏᴏᴜ ᴄᴀɴ'ᴛ ʙᴜʏ ᴛʜᴇ <#A78BFA>{id}</#A78BFA><#FF6A5C> ᴘᴀᴄᴋᴀɢᴇ."
+rent-packages-none: "{prefix}<#9691AB>ɴᴏ ʀᴇɴᴛᴀʟ ᴘᴀᴄᴋᴀɢᴇꜱ ᴀʀᴇ ᴄᴏɴꜰɪɢᴜʀᴇᴅ."
+rent-package-line: "{prefix}<#A78BFA>{id}</#A78BFA> <#5F5B73>•</#5F5B73> <#9691AB>{label}</#9691AB> <#5F5B73>•</#5F5B73> <#EEECF7>{hours}ʜ</#EEECF7> <#5F5B73>•</#5F5B73> <#EEECF7>{price}</#EEECF7>"
+rent-quote: "{prefix}<#9691AB>{hours}ʜ <#5F5B73>•</#5F5B73> <#EEECF7>{total}</#EEECF7> <#5F5B73>(ꜱʟᴏᴛ {slot} + ʜᴏᴜʀꜱ {rate}, <#A78BFA>{discount}%</#A78BFA> ᴏꜰꜰ)"
+rent-quote-free: "{prefix}<#9691AB>{hours}ʜ <#5F5B73>•</#5F5B73> <#BAFF4F>ꜰʀᴇᴇ</#BAFF4F> <#9691AB>(ʏᴏᴜ ʜᴏʟᴅ <#A78BFA>fpp.rent.free</#A78BFA><#9691AB>)."
+rent-auto-on: "{prefix}<#A78BFA>{name}</#A78BFA> <#9691AB>ᴡɪʟʟ ᴀᴜᴛᴏ-ʀᴇɴᴇᴡ <#EEECF7>{hours}ʜ</#EEECF7> <#9691AB>ʙᴇꜰᴏʀᴇ ɪᴛ ᴇxᴘɪʀᴇꜱ."
+rent-auto-off: "{prefix}<#A78BFA>{name}</#A78BFA> <#9691AB>ᴡɪʟʟ ɴᴏ ʟᴏɴɢᴇʀ ᴀᴜᴛᴏ-ʀᴇɴᴇᴡ."
+rent-auto-renewed: "{prefix}<#A78BFA>{name}</#A78BFA> <#9691AB>ᴀᴜᴛᴏ-ʀᴇɴᴇᴡᴇᴅ ʙʏ <#EEECF7>{hours}ʜ</#EEECF7> <#9691AB>(<#EEECF7>{cost}</#EEECF7><#9691AB>) - <#EEECF7>{remaining}</#EEECF7> <#9691AB>ʀᴇᴍᴀɪɴɪɴɢ."
+rent-auto-failed: "{prefix}<#FF6A5C>ᴄᴏᴜʟᴅ ɴᴏᴛ ᴀᴜᴛᴏ-ʀᴇɴᴇᴡ <#A78BFA>{name}</#A78BFA><#FF6A5C> - ɴᴏᴛ ᴇɴᴏᴜɢʜ ᴍᴏɴᴇʏ. ᴀᴜᴛᴏ-ʀᴇɴᴇᴡ ᴡᴀꜱ ᴛᴜʀɴᴇᴅ ᴏꜰꜰ."
+rent-list-line: "{prefix}<#A78BFA>{name}</#A78BFA> <#5F5B73>•</#5F5B73> <#9691AB>{owner}</#9691AB> <#5F5B73>•</#5F5B73> <#EEECF7>{remaining}</#EEECF7> <#5F5B73>•</#5F5B73> <#9691AB>ᴀᴜᴛᴏ {auto}</#9691AB>"
 # {name}, {minutes} - sent once, when a rented bot's time is running low
 rental-warning: "{prefix}<#BAFF4F>[ʀᴇɴᴛᴀʟ] <#A78BFA>{name}</#A78BFA><#BAFF4F> ʜᴀꜱ ᴏɴʟʏ <#EEECF7>{minutes}m</#EEECF7> <#BAFF4F>ᴏꜰ ʀᴇɴᴛᴇᴅ ᴛɪᴍᴇ ʟᴇꜰᴛ. ᴜꜱᴇ <#EEECF7>/fpp rent extend {name} <hours></#EEECF7> <#BAFF4F>ᴛᴏ ᴋᴇᴇᴘ ɪᴛ."
 # {name} - sent when a rented bot's time actually runs out and it despawns

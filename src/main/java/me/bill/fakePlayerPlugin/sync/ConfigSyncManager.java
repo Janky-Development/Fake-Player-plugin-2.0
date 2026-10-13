@@ -15,7 +15,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -259,62 +258,11 @@ public final class ConfigSyncManager {
         return count;
     }
 
-    public SyncStatus getStatus(String fileName) {
-        try {
-            String sql = "SELECT content_hash, pushed_at, server_id, pushed_by "
-                    + "FROM fpp_config_sync "
-                    + "WHERE config_file = ? "
-                    + "ORDER BY pushed_at DESC LIMIT 1";
 
-            try (Connection conn = db.getConnection();
-                    PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, fileName);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        return new SyncStatus(
-                                fileName,
-                                rs.getString("content_hash"),
-                                rs.getLong("pushed_at"),
-                                rs.getString("server_id"),
-                                rs.getString("pushed_by"));
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            FppLogger.error("[ConfigSync] Status check failed: " + e.getMessage());
-        }
-        return null;
-    }
 
-    public List<SyncStatus> getAllStatus() {
-        List<SyncStatus> list = new ArrayList<>();
-        for (String fileName : SYNCABLE_FILES) {
-            SyncStatus status = getStatus(fileName);
-            if (status != null) list.add(status);
-        }
-        return list;
-    }
 
-    public boolean hasLocalChanges(String fileName) {
-        File file = new File(plugin.getDataFolder(), fileName);
-        if (!file.exists()) return false;
 
-        try {
-            String localContent = readFile(file);
-            if (fileName.equals("config.yml")) {
-                localContent = stripServerSpecificKeys(localContent);
-            }
-            String localHash = computeHash(localContent);
 
-            SyncStatus status = getStatus(fileName);
-            if (status == null) return true;
-
-            return !localHash.equals(status.hash);
-
-        } catch (IOException e) {
-            return false;
-        }
-    }
 
     private String readFile(File file) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -384,13 +332,8 @@ public final class ConfigSyncManager {
     }
 
     public record SyncStatus(String fileName, String hash, long pushedAt, String serverId, String pushedBy) {
-        public String shortHash() {
-            return hash.length() > 8 ? hash.substring(0, 8) : hash;
-        }
 
-        public String formattedTime() {
-            Instant instant = Instant.ofEpochMilli(pushedAt);
-            return instant.toString();
-        }
+
+
     }
 }

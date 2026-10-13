@@ -265,8 +265,104 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
         };
     }
 
+    /** Rental/shop placeholders (usable from any PlaceholderAPI-driven shop GUI); null = not one of ours. */
+    private String rentPlaceholder(String p, OfflinePlayer player) {
+        org.bukkit.entity.Player online = player != null ? player.getPlayer() : null;
+        java.util.function.Function<Double, String> fmt = v -> {
+            var eco = plugin.getEconomyManager();
+            return eco != null ? eco.format(v) : String.format(java.util.Locale.ROOT, "%.2f", v);
+        };
+        java.util.function.BiFunction<Integer, Boolean, me.bill.fakePlayerPlugin.economy.RentalPricing.Quote> quote =
+                (hours, isNew) -> online != null
+                        ? me.bill.fakePlayerPlugin.economy.RentalPricing.quote(online, hours, isNew)
+                        : me.bill.fakePlayerPlugin.economy.RentalPricing.compute(
+                                hours,
+                                isNew ? Config.rentalPricePerBotSlot() : 0.0,
+                                Config.rentalPricePerHour(),
+                                Config.rentalBulkDiscounts(),
+                                0.0,
+                                false);
+
+        try {
+            if (p.startsWith("rent_price_new_")) {
+                return fmt.apply(quote.apply(Integer.parseInt(p.substring("rent_price_new_".length())), true).total());
+            }
+            if (p.startsWith("rent_price_")) {
+                return fmt.apply(quote.apply(Integer.parseInt(p.substring("rent_price_".length())), false).total());
+            }
+        } catch (NumberFormatException e) {
+            return "";
+        }
+        if (p.startsWith("rent_package_")) {
+            String rest = p.substring("rent_package_".length());
+            int us = rest.lastIndexOf('_');
+            if (us <= 0) return "";
+            String id = rest.substring(0, us);
+            String field = rest.substring(us + 1);
+            for (var pkg : Config.rentalPackages()) {
+                if (!pkg.id().equalsIgnoreCase(id)) continue;
+                var q = online != null
+                        ? me.bill.fakePlayerPlugin.economy.RentalPricing.quote(online, pkg.hours(), true, pkg.fixedPrice())
+                        : me.bill.fakePlayerPlugin.economy.RentalPricing.compute(
+                                pkg.hours(),
+                                Config.rentalPricePerBotSlot(),
+                                Config.rentalPricePerHour(),
+                                Config.rentalBulkDiscounts(),
+                                0.0,
+                                false);
+                return switch (field) {
+                    case "price" -> fmt.apply(q.total());
+                    case "hours" -> String.valueOf(pkg.hours());
+                    case "label" -> pkg.label();
+                    case "discount" -> String.valueOf((int) q.discountPercent());
+                    default -> "";
+                };
+            }
+            return "";
+        }
+        switch (p) {
+            case "rent_discount" -> {
+                return online != null
+                        ? String.valueOf((int) me.bill.fakePlayerPlugin.permission.Perm.resolveRentDiscount(online))
+                        : "0";
+            }
+            case "rent_limit" -> {
+                return online != null
+                        ? String.valueOf(me.bill.fakePlayerPlugin.economy.RentalPurchases.rentLimit(online))
+                        : String.valueOf(Config.rentalMaxBotsPerPlayer());
+            }
+            case "rent_slots_left" -> {
+                if (online == null) return "0";
+                int left = me.bill.fakePlayerPlugin.economy.RentalPurchases.rentLimit(online)
+                        - me.bill.fakePlayerPlugin.economy.RentalPurchases.rentedCount(plugin, online);
+                return String.valueOf(Math.max(0, left));
+            }
+            case "rent_balance" -> {
+                var eco = plugin.getEconomyManager();
+                return eco != null && player != null && eco.isAvailable()
+                        ? eco.format(eco.getBalance(player))
+                        : "";
+            }
+            case "rental_autorenew" -> {
+                var service = plugin.getRentalService();
+                if (player == null || service == null) return "off";
+                int hours = getUserBots(player).stream()
+                        .filter(FakePlayer::isRented)
+                        .mapToInt(fp -> service.getAutoRenewHours(fp.getUuid()))
+                        .max()
+                        .orElse(0);
+                return hours > 0 ? hours + "h" : "off";
+            }
+            default -> {
+                return null;
+            }
+        }
+    }
+
     private String handleDynamic(
             String p, OfflinePlayer player, int localBots, Collection<RemoteBotEntry> remoteEntries) {
+        String rent = rentPlaceholder(p, player);
+        if (rent != null) return rent;
         if (p.startsWith("count_")) {
             return String.valueOf(countBotsInWorld(p.substring(6)));
         }

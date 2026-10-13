@@ -1,69 +1,57 @@
 package me.bill.fakePlayerPlugin.command;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.entity.CraftPlayer;
-import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import me.bill.fakePlayerPlugin.FakePlayerPlugin;
-import me.bill.fakePlayerPlugin.api.event.FppBotAttackEvent;
 import me.bill.fakePlayerPlugin.api.event.FppBotTaskEvent;
 import me.bill.fakePlayerPlugin.api.impl.FppApiImpl;
-import me.bill.fakePlayerPlugin.api.impl.FppBotImpl;
+import me.bill.fakePlayerPlugin.config.Config;
 import me.bill.fakePlayerPlugin.fakeplayer.FakePlayer;
 import me.bill.fakePlayerPlugin.fakeplayer.FakePlayerManager;
-import me.bill.fakePlayerPlugin.fakeplayer.NmsPlayerSpawner;
+import me.bill.fakePlayerPlugin.fakeplayer.PveController;
 import me.bill.fakePlayerPlugin.lang.Lang;
 import me.bill.fakePlayerPlugin.permission.Perm;
 import me.bill.fakePlayerPlugin.util.BotAccess;
-import me.bill.fakePlayerPlugin.util.FppScheduler;
 
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.Vec3;
-
+/**
+ * {@code /fpp attack}: the one-line way to put a bot to work as a fighter - an AFK mob-farm guard that
+ * holds its post, or a hunter that chases and returns. It is a front-end for the bot's persistent PVE
+ * settings (the same ones the settings GUI edits), so a configured bot keeps fighting across restarts.
+ * The fighting itself lives in {@link PveController}.
+ *
+ * <pre>
+ *   /fpp attack Bot                    guard: attack hostile mobs that come in reach (holds position)
+ *   /fpp attack Bot --chase            hunt: walk to hostile mobs in range, return afterwards
+ *   /fpp attack Bot --mobs zombie,skeleton --range 12 --priority lowest-health
+ *   /fpp attack --all --any            every bot, any non-player mob
+ *   /fpp attack Bot --once             one landed hit, then stop
+ *   /fpp attack Bot --status | --stop  /  /fpp attack --stop
+ * </pre>
+ */
 public final class AttackCommand implements FppCommand {
 
-    private static final Map<Material, Integer> WEAPON_COOLDOWN = Map.ofEntries(
-            Map.entry(Material.NETHERITE_SWORD, 12),
-            Map.entry(Material.DIAMOND_SWORD, 12),
-            Map.entry(Material.IRON_SWORD, 12),
-            Map.entry(Material.GOLDEN_SWORD, 12),
-            Map.entry(Material.STONE_SWORD, 12),
-            Map.entry(Material.WOODEN_SWORD, 12),
-            Map.entry(Material.NETHERITE_AXE, 20),
-            Map.entry(Material.DIAMOND_AXE, 20),
-            Map.entry(Material.IRON_AXE, 22),
-            Map.entry(Material.GOLDEN_AXE, 20),
-            Map.entry(Material.STONE_AXE, 25),
-            Map.entry(Material.WOODEN_AXE, 25),
-            Map.entry(Material.TRIDENT, 22),
-            Map.entry(Material.MACE, 33));
-    private static final int DEFAULT_COOLDOWN = 5;
+    private static final double MAX_RANGE = 48.0;
 
     private final FakePlayerPlugin plugin;
     private final FakePlayerManager manager;
-    private final Map<UUID, Integer> attackTasks = new ConcurrentHashMap<>();
-    private final Map<UUID, Integer> cooldownTicks = new ConcurrentHashMap<>();
 
     public AttackCommand(FakePlayerPlugin plugin, FakePlayerManager manager) {
         this.plugin = plugin;
         this.manager = manager;
     }
+
+    // ── metadata ────────────────────────────────────────────────────────────
 
     @Override
     public String getName() {
@@ -72,12 +60,13 @@ public final class AttackCommand implements FppCommand {
 
     @Override
     public String getUsage() {
-        return "<bot|--all> [--once|--stop]  |  --stop";
+        return "<bot|--all> [--stand|--chase] [--hostile|--any|--mobs <types>] [--range <n>]"
+                + " [--priority nearest|lowest-health] [--once]  |  <bot> --status  |  <bot|--all> --stop";
     }
 
     @Override
     public String getDescription() {
-        return "Make a bot swing at the entity it is looking at.";
+        return "Fighting bot: guards its post or hunts hostile mobs with real client attacks (AFK mob farms).";
     }
 
     @Override
@@ -89,6 +78,8 @@ public final class AttackCommand implements FppCommand {
     public boolean canUse(CommandSender sender) {
         return Perm.has(sender, Perm.ATTACK);
     }
+
+    // ── execution ───────────────────────────────────────────────────────────
 
     @Override
     public boolean execute(CommandSender sender, String[] args) {
@@ -103,27 +94,24 @@ public final class AttackCommand implements FppCommand {
             return true;
         }
 
-        String botName = args[0];
-        boolean once = false;
-        boolean stop = false;
-        for (int i = 1; i < args.length; i++) {
-            switch (args[i].toLowerCase()) {
-                case "--once" -> once = true;
-                case "--stop" -> stop = true;
-                default -> {
-                    sender.sendMessage(Lang.get("attack-usage"));
-                    return true;
-                }
-            }
-        }
+        String target = args[0];
+        Options o = parse(sender, args);
+        if (o == null) return true;
 
-        if (botName.equalsIgnoreCase("--all")) {
-            if (stop) {
+        if (target.equalsIgnoreCase("--all")) {
+            if (o.stop) {
                 stopAll();
                 sender.sendMessage(Lang.get("attack-stopped-all"));
                 return true;
             }
-            int count = startAllAllowed(sender, once);
+            int count = 0;
+            for (FakePlayer fp : new ArrayList<>(manager.getActivePlayers())) {
+                if (!canControl(sender, fp)) continue;
+                Player bot = fp.getPlayer();
+                if (bot == null || !bot.isOnline()) continue;
+                apply(fp, o);
+                count++;
+            }
             sender.sendMessage(
                     count == 0
                             ? Lang.get("attack-no-bots")
@@ -131,12 +119,12 @@ public final class AttackCommand implements FppCommand {
             return true;
         }
 
-        FakePlayer fp = manager.getByName(botName);
+        FakePlayer fp = manager.getByName(target);
         if (fp == null) {
-            sender.sendMessage(Lang.get("attack-not-found", "name", botName));
+            sender.sendMessage(Lang.get("attack-not-found", "name", target));
             return true;
         }
-        if (sender instanceof Player player && !Perm.has(sender, Perm.ADMIN) && !BotAccess.canAdminister(player, fp)) {
+        if (!canControl(sender, fp)) {
             sender.sendMessage(Lang.get("no-permission"));
             return true;
         }
@@ -146,155 +134,246 @@ public final class AttackCommand implements FppCommand {
             return true;
         }
 
-        if (stop) {
+        if (o.status) {
+            sendStatus(sender, fp);
+            return true;
+        }
+        if (o.stop) {
             stopAttacking(fp.getUuid());
             sender.sendMessage(Lang.get("attack-stopped", "name", fp.getDisplayName()));
             return true;
         }
 
-        startForBot(fp, once);
-        sender.sendMessage(
-                once
-                        ? Lang.get("attack-started-once", "name", fp.getDisplayName())
-                        : Lang.get("attack-started", "name", fp.getDisplayName()));
+        apply(fp, o);
+        sender.sendMessage(Lang.get(
+                o.once ? "attack-started-once" : "attack-started-config",
+                "name",
+                fp.getDisplayName(),
+                "mode",
+                fp.getPveSmartAttackMode().movesWhileAttacking() ? "chase" : "stand",
+                "range",
+                trim(fp.getPveRange()),
+                "targets",
+                describeTargets(fp)));
         return true;
     }
 
-    private int startAllAllowed(CommandSender sender, boolean once) {
-        int count = 0;
-        for (FakePlayer fp : manager.getActivePlayers()) {
-            if (sender instanceof Player player
-                    && !Perm.has(sender, Perm.ADMIN)
-                    && !BotAccess.canAdminister(player, fp)) {
-                continue;
+    private boolean canControl(CommandSender sender, FakePlayer fp) {
+        return !(sender instanceof Player player)
+                || Perm.has(sender, Perm.ADMIN)
+                || BotAccess.canAdminister(player, fp);
+    }
+
+    /** Parsed flags; unset fields keep the bot's existing/ configured value. */
+    private static final class Options {
+        boolean stop;
+        boolean status;
+        boolean once;
+        @Nullable Boolean chase;
+        @Nullable Set<String> mobs;
+        @Nullable Double range;
+        @Nullable String priority;
+    }
+
+    private @Nullable Options parse(CommandSender sender, String[] args) {
+        Options o = new Options();
+        for (int i = 1; i < args.length; i++) {
+            String a = args[i].toLowerCase(Locale.ROOT);
+            switch (a) {
+                case "--stop" -> o.stop = true;
+                case "--status" -> o.status = true;
+                case "--once" -> o.once = true;
+                case "--stand", "--guard" -> o.chase = false;
+                case "--chase", "--hunt", "--move" -> o.chase = true;
+                case "--hostile" -> o.mobs = new LinkedHashSet<>();
+                case "--any", "--all-mobs" -> o.mobs = new LinkedHashSet<>(List.of(PveController.ANY_MOB));
+                case "--mobs", "--mob" -> {
+                    if (i + 1 >= args.length) {
+                        sender.sendMessage(Lang.get("attack-usage"));
+                        return null;
+                    }
+                    Set<String> types = new LinkedHashSet<>();
+                    for (String raw : args[++i].split(",")) {
+                        String name = raw.trim().toUpperCase(Locale.ROOT);
+                        if (name.isEmpty()) continue;
+                        if (!name.equals(PveController.ANY_MOB) && !isMobType(name)) {
+                            sender.sendMessage(Lang.get("attack-unknown-mob", "type", raw.trim()));
+                            return null;
+                        }
+                        types.add(name);
+                    }
+                    o.mobs = types;
+                }
+                case "--range" -> {
+                    if (i + 1 >= args.length) {
+                        sender.sendMessage(Lang.get("attack-usage"));
+                        return null;
+                    }
+                    try {
+                        double r = Double.parseDouble(args[++i]);
+                        if (!(r >= 1.0) || r > MAX_RANGE) throw new NumberFormatException();
+                        o.range = r;
+                    } catch (NumberFormatException e) {
+                        sender.sendMessage(Lang.get("attack-invalid-range", "max", trim(MAX_RANGE)));
+                        return null;
+                    }
+                }
+                case "--priority" -> {
+                    if (i + 1 >= args.length) {
+                        sender.sendMessage(Lang.get("attack-usage"));
+                        return null;
+                    }
+                    String p = args[++i].toLowerCase(Locale.ROOT);
+                    if (!p.equals("nearest") && !p.equals("lowest-health")) {
+                        sender.sendMessage(Lang.get("attack-usage"));
+                        return null;
+                    }
+                    o.priority = p;
+                }
+                default -> {
+                    sender.sendMessage(Lang.get("attack-usage"));
+                    return null;
+                }
             }
-            Player bot = fp.getPlayer();
-            if (bot == null || !bot.isOnline()) continue;
-            startForBot(fp, once);
-            count++;
         }
-        return count;
+        return o;
     }
 
-    private void startForBot(FakePlayer fp, boolean once) {
-        Player bot = fp.getPlayer();
-        if (bot == null) return;
-        stopAttacking(fp.getUuid());
+    private static boolean isMobType(String name) {
+        try {
+            EntityType type = EntityType.valueOf(name);
+            return type.isAlive() && type != EntityType.PLAYER && type != EntityType.ARMOR_STAND;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /** Writes the options onto the bot's persistent PVE settings and (re)starts its combat task. */
+    private void apply(FakePlayer fp, Options o) {
+        if (o.mobs != null) fp.setPveMobTypes(o.mobs);
+        if (o.range != null) fp.setPveRange(o.range);
+        if (o.priority != null) fp.setPvePriority(o.priority);
+
+        boolean chase = o.chase != null ? o.chase : Config.attackDefaultChase();
+        // A bare re-run keeps a bot that is already configured to chase chasing.
+        if (o.chase == null && fp.isPveEnabled()) chase = fp.isPveMoveToTarget();
+        fp.setPveSmartAttackMode(
+                chase ? FakePlayer.PveSmartAttackMode.ON_MOVE : FakePlayer.PveSmartAttackMode.ON_NO_MOVE);
+
         FppApiImpl.fireTaskEvent(fp, "attack", FppBotTaskEvent.Action.START);
-        UUID uuid = fp.getUuid();
-        cooldownTicks.put(uuid, 0);
-        int taskId = FppScheduler.runAtEntityRepeatingWithId(plugin, bot, () -> tickAttack(fp, uuid, once), 0L, 1L);
-        attackTasks.put(uuid, taskId);
+        PveController pve = plugin.getPveController();
+        if (pve != null) {
+            if (o.once) pve.attackOnce(fp);
+            else pve.refresh(fp);
+        }
     }
 
-    private void tickAttack(FakePlayer fp, UUID uuid, boolean once) {
-        Player bot = fp.getPlayer();
-        if (bot == null || !bot.isOnline()) {
-            stopAttacking(uuid);
+    private void sendStatus(CommandSender sender, FakePlayer fp) {
+        PveController pve = plugin.getPveController();
+        if (!fp.isPveEnabled()) {
+            sender.sendMessage(Lang.get("attack-status-off", "name", fp.getDisplayName()));
             return;
         }
-        if (fp.isInventoryOpen() || fp.isActionsPaused()) return;
-
-        int cooldown = cooldownTicks.getOrDefault(uuid, 0);
-        if (cooldown > 0) {
-            cooldownTicks.put(uuid, cooldown - 1);
-            return;
-        }
-
-        ServerPlayer nms = ((CraftPlayer) bot).getHandle();
-        var nmsMainHand = nms.getItemInHand(InteractionHand.MAIN_HAND);
-        if (nms.getCooldowns().isOnCooldown(nmsMainHand)) return;
-
-        EntityHitResult entityHit = rayTraceForEntity(nms);
-        if (entityHit == null) return;
-
-        Entity target = entityHit.getEntity().getBukkitEntity();
-        if (manager.getByUuid(target.getUniqueId()) != null) return;
-
-        bot.swingMainHand();
-        var event = new FppBotAttackEvent(new FppBotImpl(fp), target, 1.0);
-        Bukkit.getPluginManager().callEvent(event);
-        if (event.isCancelled()) return;
-
-        NmsPlayerSpawner.performAttack(bot, target, 1.0);
-        ItemStack mainHand = bot.getInventory().getItemInMainHand();
-        Material weapon = mainHand.getType() != Material.AIR ? mainHand.getType() : null;
-        cooldownTicks.put(uuid, getWeaponCooldown(weapon));
-
-        if (once) stopAttacking(uuid);
+        LivingEntity t = pve != null ? pve.currentTarget(fp.getUuid()) : null;
+        sender.sendMessage(Lang.get(
+                "attack-status-on",
+                "name",
+                fp.getDisplayName(),
+                "mode",
+                fp.getPveSmartAttackMode().movesWhileAttacking() ? "chase" : "stand",
+                "range",
+                trim(fp.getPveRange()),
+                "targets",
+                describeTargets(fp),
+                "target",
+                t != null ? t.getType().name().toLowerCase(Locale.ROOT) : "none"));
     }
 
-    /** Swing cooldown in ticks for a weapon material - shared with the PVE controller. */
-    public static int getWeaponCooldown(@Nullable Material weapon) {
-        if (weapon == null) return DEFAULT_COOLDOWN;
-        return WEAPON_COOLDOWN.getOrDefault(weapon, DEFAULT_COOLDOWN);
+    private static String describeTargets(FakePlayer fp) {
+        Set<String> types = fp.getPveMobTypes();
+        if (types.isEmpty()) return "hostile";
+        if (types.contains(PveController.ANY_MOB)) return "any mob";
+        return String.join(", ", types).toLowerCase(Locale.ROOT);
     }
+
+    private static String trim(double d) {
+        return d == Math.floor(d) ? String.valueOf((int) d) : String.format(Locale.ROOT, "%.1f", d);
+    }
+
+    // ── API kept for StopCommand / GUI / other systems ──────────────────────
 
     public void stopAttacking(UUID botUuid) {
-        Integer taskId = attackTasks.remove(botUuid);
-        if (taskId != null) FppScheduler.cancelTask(taskId);
-        cooldownTicks.remove(botUuid);
         FakePlayer fp = manager.getByUuid(botUuid);
-        if (fp != null) FppApiImpl.fireTaskEvent(fp, "attack", FppBotTaskEvent.Action.STOP);
+        if (fp == null) return;
+        boolean wasOn = fp.isPveEnabled();
+        fp.setPveSmartAttackMode(FakePlayer.PveSmartAttackMode.OFF);
+        PveController pve = plugin.getPveController();
+        if (pve != null) pve.refresh(fp);
+        if (wasOn) FppApiImpl.fireTaskEvent(fp, "attack", FppBotTaskEvent.Action.STOP);
     }
 
     public void stopAll() {
-        new HashSet<>(attackTasks.keySet()).forEach(this::stopAttacking);
+        for (FakePlayer fp : new ArrayList<>(manager.getActivePlayers())) {
+            if (fp.isPveEnabled()) stopAttacking(fp.getUuid());
+        }
     }
 
     public boolean isAttacking(UUID botUuid) {
-        return attackTasks.containsKey(botUuid);
+        FakePlayer fp = manager.getByUuid(botUuid);
+        return fp != null && fp.isPveEnabled();
     }
+
+    // ── tab completion ──────────────────────────────────────────────────────
 
     @Override
     public List<String> tabComplete(CommandSender sender, String[] args) {
         if (!canUse(sender)) return List.of();
+        List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            String prefix = args[0].toLowerCase();
-            List<String> out = new ArrayList<>();
+            String prefix = args[0].toLowerCase(Locale.ROOT);
             for (String s : List.of("--stop", "--all")) if (s.startsWith(prefix)) out.add(s);
             for (FakePlayer fp : manager.getActivePlayers()) {
-                if (fp.getName().toLowerCase().startsWith(prefix)) out.add(fp.getName());
+                if (fp.getName().toLowerCase(Locale.ROOT).startsWith(prefix)) out.add(fp.getName());
             }
             return out;
         }
-        String prefix = args[args.length - 1].toLowerCase();
-        Set<String> used = new HashSet<>();
-        for (int i = 1; i < args.length - 1; i++) used.add(args[i].toLowerCase());
-        List<String> out = new ArrayList<>();
-        for (String flag : List.of("--once", "--stop"))
-            if (!used.contains(flag) && flag.startsWith(prefix)) out.add(flag);
-        return out;
-    }
 
-    @SuppressWarnings("resource")
-    @Nullable
-    private static EntityHitResult rayTraceForEntity(ServerPlayer player) {
-        double reach = player.gameMode.isCreative() ? 5.0 : 4.5;
-        Vec3 eyePos = player.getEyePosition(1.0f);
-        Vec3 viewVec = player.getViewVector(1.0f);
-        Vec3 endPos = eyePos.add(viewVec.x * reach, viewVec.y * reach, viewVec.z * reach);
-        AABB searchBox =
-                player.getBoundingBox().expandTowards(viewVec.scale(reach)).inflate(1.0);
-
-        EntityHitResult best = null;
-        double bestSq = reach * reach;
-        for (var entity : player.level().getEntities(player, searchBox, e -> !e.isSpectator() && e.isAttackable())) {
-            AABB box = entity.getBoundingBox().inflate(entity.getPickRadius());
-            var hitOpt = box.clip(eyePos, endPos);
-            if (box.contains(eyePos)) {
-                if (bestSq >= 0) {
-                    best = new EntityHitResult(entity, hitOpt.orElse(eyePos));
-                    bestSq = 0;
+        String prev = args[args.length - 2].toLowerCase(Locale.ROOT);
+        String prefix = args[args.length - 1].toLowerCase(Locale.ROOT);
+        switch (prev) {
+            case "--mobs", "--mob" -> {
+                String head = "";
+                String tail = prefix;
+                int comma = prefix.lastIndexOf(',');
+                if (comma >= 0) {
+                    head = prefix.substring(0, comma + 1);
+                    tail = prefix.substring(comma + 1);
                 }
-            } else if (hitOpt.isPresent()) {
-                double distance = eyePos.distanceToSqr(hitOpt.get());
-                if (distance < bestSq) {
-                    best = new EntityHitResult(entity, hitOpt.get());
-                    bestSq = distance;
+                for (EntityType t : EntityType.values()) {
+                    if (!t.isAlive() || t == EntityType.PLAYER || t == EntityType.ARMOR_STAND) continue;
+                    String n = t.name().toLowerCase(Locale.ROOT);
+                    if (n.startsWith(tail)) out.add(head + n);
+                    if (out.size() >= 40) break;
                 }
+                return out;
             }
+            case "--priority" -> {
+                for (String s : List.of("nearest", "lowest-health")) if (s.startsWith(prefix)) out.add(s);
+                return out;
+            }
+            case "--range" -> {
+                for (String s : List.of("4", "8", "12", "16", "24")) if (s.startsWith(prefix)) out.add(s);
+                return out;
+            }
+            default -> {}
         }
-        return best;
+        Set<String> used = new java.util.HashSet<>();
+        for (int i = 1; i < args.length - 1; i++) used.add(args[i].toLowerCase(Locale.ROOT));
+        for (String flag : List.of(
+                "--stand", "--chase", "--hostile", "--any", "--mobs", "--range", "--priority", "--once", "--status",
+                "--stop")) {
+            if (!used.contains(flag) && flag.startsWith(prefix)) out.add(flag);
+        }
+        return out;
     }
 }

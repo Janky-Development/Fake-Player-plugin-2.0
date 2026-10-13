@@ -43,7 +43,6 @@ public final class VaultEconomyProvider implements EconomyProvider {
     private Method withdrawMethod;
     private Method depositMethod;
     private Method transactionSuccessMethod;
-    private Method getProviderNamePluginMethod;
 
     private synchronized void init() {
         if (ready || broken) return;

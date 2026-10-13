@@ -601,18 +601,6 @@ public final class PerformanceReportExporter {
         sb.append("\n");
     }
 
-    private String firstSegment(String path) {
-        int dot = path.indexOf('.');
-        return dot < 0 ? path : path.substring(0, dot);
-    }
-
-    private String firstTwoSegments(String path) {
-        int first = path.indexOf('.');
-        if (first < 0) return path;
-        int second = path.indexOf('.', first + 1);
-        return second < 0 ? path : path.substring(0, second);
-    }
-
     private boolean isMethodLike(String path) {
         int lastDot = path.lastIndexOf('.');
         if (lastDot < 0) return false;

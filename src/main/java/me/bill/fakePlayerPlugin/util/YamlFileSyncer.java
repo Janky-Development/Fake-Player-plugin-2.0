@@ -19,9 +19,7 @@ public final class YamlFileSyncer {
 
     public record SyncResult(String fileName, List<String> keysAdded) {
 
-        public boolean hasChanges() {
-            return !keysAdded.isEmpty();
-        }
+
 
         public int count() {
             return keysAdded.size();
@@ -123,19 +121,5 @@ public final class YamlFileSyncer {
         return count;
     }
 
-    public static int countJarKeys(FakePlayerPlugin plugin, String jarResourcePath) {
-        InputStream jarStream = plugin.getResource(jarResourcePath);
-        if (jarStream == null) return 0;
-        try (jarStream) {
-            YamlConfiguration jarCfg =
-                    YamlConfiguration.loadConfiguration(new InputStreamReader(jarStream, StandardCharsets.UTF_8));
-            int count = 0;
-            for (String key : jarCfg.getKeys(true)) {
-                if (!jarCfg.isConfigurationSection(key)) count++;
-            }
-            return count;
-        } catch (IOException e) {
-            return 0;
-        }
-    }
+
 }

@@ -33,17 +33,6 @@ public record ReportSnapshot(
         return all;
     }
 
-    public SectionEntry findSection(String name) {
-        return allSections().stream()
-                .filter(s -> s.name().equalsIgnoreCase(name))
-                .findFirst()
-                .orElse(null);
-    }
-
-    public long eventCount(String eventName) {
-        return eventCounters.getOrDefault(eventName, 0L);
-    }
-
     public record SectionEntry(
             String name,
             String category,

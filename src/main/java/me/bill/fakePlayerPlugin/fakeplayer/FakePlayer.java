@@ -57,8 +57,6 @@ public final class FakePlayer {
 
     private int deathCount = 0;
 
-    private int lastChunkX = Integer.MIN_VALUE;
-    private int lastChunkZ = Integer.MIN_VALUE;
 
     private Entity nametagEntity = null;
 
@@ -69,7 +67,6 @@ public final class FakePlayer {
     private boolean respawning = false;
     private boolean respawnOnDeath = Config.respawnOnDeath();
 
-    private int tabRefreshCount = 0;
 
     private transient volatile Object cachedNmsDisplayComponent;
 
@@ -84,7 +81,6 @@ public final class FakePlayer {
     // see BotAuthManager's own class doc for the full flow.
     private volatile boolean authPending = false;
 
-    private String lastKnownWorld = null;
 
     private boolean bodyless = false;
 
@@ -268,15 +264,7 @@ public final class FakePlayer {
         return Duration.between(spawnTime, Instant.now());
     }
 
-    public String getUptimeFormatted() {
-        Duration d = getUptime();
-        long h = d.toHours();
-        long m = d.toMinutesPart();
-        long s = d.toSecondsPart();
-        if (h > 0) return h + "h " + m + "m " + s + "s";
-        if (m > 0) return m + "m " + s + "s";
-        return s + "s";
-    }
+
 
     public double getTotalDamageTaken() {
         return totalDamageTaken;
@@ -290,17 +278,13 @@ public final class FakePlayer {
         return alive;
     }
 
-    public int getTabRefreshCount() {
-        return tabRefreshCount;
-    }
+
 
     public boolean isFrozen() {
         return frozen;
     }
 
-    public String getLastKnownWorld() {
-        return lastKnownWorld;
-    }
+
 
     public void addDamageTaken(double amount) {
         totalDamageTaken += amount;
@@ -314,9 +298,7 @@ public final class FakePlayer {
         this.alive = alive;
     }
 
-    public void incrementTabRefresh() {
-        tabRefreshCount++;
-    }
+
 
     public void setFrozen(boolean frozen) {
         this.frozen = frozen;
@@ -356,22 +338,13 @@ public final class FakePlayer {
         this.cachedTabListGameProfile = null;
     }
 
-    public int getLastChunkX() {
-        return lastChunkX;
-    }
 
-    public int getLastChunkZ() {
-        return lastChunkZ;
-    }
 
-    public void setLastChunk(int cx, int cz) {
-        lastChunkX = cx;
-        lastChunkZ = cz;
-    }
 
-    public boolean hasMovedChunk(int cx, int cz) {
-        return cx != lastChunkX || cz != lastChunkZ;
-    }
+
+
+
+
 
     public void setSpawnLocation(Location loc) {
         this.spawnLocation = loc;
@@ -606,12 +579,7 @@ public final class FakePlayer {
         return nameTagNick;
     }
 
-    public void setNameTagNick(@Nullable String nick) {
-        this.nameTagNick = nick;
 
-        this.cachedNmsDisplayComponent = null;
-        this.cachedNmsDisplaySource = null;
-    }
 
     public int getPing() {
         return ping;
@@ -634,9 +602,7 @@ public final class FakePlayer {
         return tabListName(getName());
     }
 
-    public int getBasePing() {
-        return basePing;
-    }
+
 
     public void setBasePing(int basePing) {
         this.basePing = basePing;
@@ -667,9 +633,7 @@ public final class FakePlayer {
         this.tabListDirty = true;
     }
 
-    public long getSpawnTick() {
-        return spawnTimeMs;
-    }
+
 
     public void setSpawnTick(long ms) {
         this.spawnTimeMs = ms;
@@ -683,9 +647,7 @@ public final class FakePlayer {
         tabListDirty = false;
     }
 
-    public void markTabListDirty() {
-        tabListDirty = true;
-    }
+
 
     public String getLastRenderedActionLabel() {
         return lastRenderedActionLabel;
@@ -707,9 +669,7 @@ public final class FakePlayer {
         return spawnedByUuid;
     }
 
-    public BotRecord getDbRecord() {
-        return dbRecord;
-    }
+
 
     public Instant getSpawnTime() {
         return spawnTime;
@@ -840,9 +800,7 @@ public final class FakePlayer {
         return pveSmartAttackMode.movesWhileAttacking();
     }
 
-    public void setPveMoveToTarget(boolean v) {
-        this.pveSmartAttackMode = v ? PveSmartAttackMode.ON_MOVE : PveSmartAttackMode.ON_NO_MOVE;
-    }
+
 
     public String getPveMobType() {
         return pveMobTypes.isEmpty() ? null : String.join(",", pveMobTypes);
@@ -876,9 +834,7 @@ public final class FakePlayer {
         }
     }
 
-    public boolean hasPveMobType(String type) {
-        return pveMobTypes.contains(type);
-    }
+
 
     public Set<UUID> getSharedControllers() {
         return Set.copyOf(sharedControllers);

@@ -1,5 +1,94 @@
 # Changelog
 
+## v2.1.5 (Beta)
+
+A large "make the bot a real client" release: bots now act, fight, mine, walk and load chunks the way a
+player's client does, with a new pathfinder, a reworked GUI, and new automation commands.
+
+### Added
+- **`/fpp clear`** - self-running layer-by-layer excavation of a chunk, area, WorldEdit selection or radius
+  (`--chunk`, `--area`, `--selection`, `--radius`, `--top/--bottom/--depth`, `--keep`, `--trash`,
+  `--containers`, `--tunnel`, `--no-build`, `--no-seal`, `--status`, `--stop`). Works from inside the layer,
+  digs down through the layers, only digs inside the region, seals water/lava, collects drops, deposits at a
+  registered storage or discards `--trash`, recovers from being stuck (re-anchor, then **builds up** with
+  scaffold blocks) and reports progress. Permission `fpp.clear` (op). Config: `clear.*`.
+- **Spawn actions** - `/fpp spawn [--name N] [--count N] [--location …] [--delay t] [--preset P] <action>
+  [args] [then|wait t <action> …]` starts work on the new bot once it is online, as the spawner (permissions
+  checked before spawning). Any bot-first command is an action (built-ins `attack`, `move`, `find`,
+  `left-click`, `right-click`, `storage`, `sneak`, `freeze`, `clear`), plus `preset <name>`, `wait <duration>`,
+  admin `run <raw command>` and `{bot} {owner} {x} {y} {z} {world} {index}` placeholders. Config:
+  `spawn-actions.*` (presets, allow/deny lists, limits).
+- **`/fpp menu`** main-menu hub (alias `gui`) and a **Chunks** settings category.
+- **Rent GUI** - `/fpp rent` opens a shop (packages -> my rentals -> per-bot page with auto-renew), configurable
+  `economy.rental.packages`, a main-menu card.
+- **Shop-GUI integration** - `/fpp rent package <id> [bot] [--for <player>]`, `/fpp rent packages`,
+  PlaceholderAPI price/limit/balance placeholders (`%fpp_rent_package_<id>_price%`, `%fpp_rent_price_<h>%`, …)
+  and the cancellable `FppRentalPurchaseEvent` (veto or re-price any purchase).
+- **Rental features** - `/fpp rent quote|auto|list`, persistent auto-renew (`fpp_rental_auto` table), expiry
+  grace period, bulk discounts (`economy.rental.bulk-discounts`), optional `economy.spawn.price`, and the
+  permissions `fpp.rent.free`, `fpp.rent.auto`, `fpp.rent.admin`, `fpp.rent.discount.<n>`,
+  `fpp.rent.limit.<n>`, `fpp.spawn.free`.
+- **Find: scan mode** - `/fpp find <bot> <block> --scan` reports what is visible without moving.
+- **API** - `FppRentalPurchaseEvent`.
+
+### Changed
+- **Left/right-click rewritten** as a port of the 26.3 client's own click logic (`startAttack`,
+  `continueAttack`, `startUseItem`, `MultiPlayerGameMode` dig state): real crosshair pick with the
+  interaction-range attributes, attack-charge gating, miss/destroy/use delays, main-then-off-hand interaction
+  order, spear stab, held-use release. `--once` = one press (a started dig/use is held to completion),
+  `--repeat` = spam-click (a fresh press every interval, never held; multi-tick uses are tapped and released;
+  survival blocks only break if instant-break), `--hold` = button held down.
+- **PVE / `/fpp attack` rebuilt as client combat** - a one-line fighter setup (`--stand` guard for AFK farms,
+  `--chase` hunter with return-to-post, `--mobs/--hostile/--any`, `--range`, `--priority`, `--once`,
+  `--status`) over the bot's persistent PVE settings. Attacks use the same client attack logic (crosshair
+  pick, attack-charge gating, real attack packet - no damage shortcut); auto best-weapon selection from item
+  attributes, optional falling criticals, line-of-sight, spared pets/villagers, unreachable-target
+  blacklisting. Config: `attack-mob.*`.
+- **Find detection is legit** - only blocks with an exposed face (air, fluid, glass, foliage…) are reported;
+  buried ore is never detected, so it is no X-ray. Mining a vein block uncovers its neighbours for the next
+  scan. Ranks by walking effort (vertical costs more), prefers continuing the current vein, skips
+  lava-adjacent blocks unless `--hazards`, supports block lists and aliases (`ores`, `logs`, `leaves`,
+  `stone`, `dirt`, `sand`). Digging uses the client's hold-attack logic.
+- **Pathfinding rebuilt** (Pathetic dependency removed) - an in-house A* costed in ticks over the server's real
+  collision shapes (slabs, stairs, carpets, ladders, vines, water, doors): walk/diagonal/step-up/drop/fall,
+  parkour gaps, ladder & vine climbing, swimming, opening wooden doors and gates, tool-aware block breaking,
+  bridging and a `PILLAR` (build straight up) move. Block placement and digging are real packets/client logic.
+  Searches are time-sliced on the bot's own thread (Folia-safe, never stalls a tick), return partial routes
+  toward far goals and re-plan on moved targets, changed terrain, being shoved off-route or getting stuck.
+  Digging can be restricted to a region (`PathOptions.breakAllowed`).
+- **Chunk loading is client-authentic** - the plugin no longer holds chunk tickets or touches server
+  view/simulation settings. A bot is a normal player to the server's own chunk system and only reports a render
+  distance (`chunk-loading.view-distance`, per-bot override, mass-spawn lowering) plus the rest of a client's
+  options (`bot-client`: language, main hand, skin layers, particles, chat visibility).
+- **GUI overhaul** in the reference plugin's style: centred card grids on a backdrop with in-menu paging, a
+  back-to-menu button everywhere, shared sounds.
+- **Economy & rentals overhauled** - one price engine (`RentalPricing`) for command/GUI/auto-renew; typed charge
+  results with automatic refunds on failed spawns and an optional INFO audit log
+  (`economy.log-transactions`).
+- Attacks no longer force full strength; bots wait for the real attack charge.
+- Bots now report skin layers `all` (127) like a default client (set `bot-client.skin-parts: none` for the
+  old look).
+
+### Performance
+- **Per-bot tick:** the viewer snapshot (positions of real players) is built once per tick instead of once per
+  bot per tick (was O(bots x players) allocations), and bots are no longer treated as viewers - no position,
+  rotation or tab-list packets are built for other bots' fake connections.
+- **Pathfinder:** block cells and search nodes live in primitive open-addressing maps (no key boxing); stand-cell
+  searches share one terrain view.
+- **Find:** leftover candidates and freshly exposed vein neighbours are reused instead of re-snapshotting every
+  chunk in range after each mined block.
+- **Clear:** target selection probes the bot's neighbourhood before scanning the whole layer.
+- The shaded jar dropped the Pathetic engine (~smaller, one less async search pool).
+
+### Removed
+- Roughly 140 unused methods/fields/imports/config accessors and four dead classes
+  (`NmsReflection`, `BotEffectHandler`, `BotCommandBlocker`, `DataMigrator`); the repository's unit-test
+  sources and the test task/CI step.
+- The Pathetic pathfinding dependency, the damage shortcut for PVE attacks, and the direct block-setting
+  placement/dig helpers used by pathing.
+- `pathfinding.break-ticks`, `pathfinding.place-ticks`, `pathfinding.max-nodes`, `pathfinding.recalc-interval`,
+  `pathfinding.follow-recalc-interval`, `pathfinding.detour-*` are no longer read.
+
 ## v2.1.0 - Part 1 (Beta)
 
 ### Fixed

@@ -1,5 +1,6 @@
 package me.bill.fakePlayerPlugin.gui;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,17 +11,20 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
 import me.bill.fakePlayerPlugin.util.FppScheduler;
+import me.bill.fakePlayerPlugin.util.TextUtil;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.Component;
@@ -53,6 +57,152 @@ public final class GuiKit {
     public static final TextColor FROZEN = TextColor.fromHexString("#CABAFF");
 
     public static final int CAT_WINDOW = 5;
+
+    // ── Shared 54-slot layout (rows 0-4 content, row 5 footer) ─────────────────────────────────
+    public static final int SIZE = 54;
+    public static final int PER_PAGE = 45;
+    /** Footer slot that takes the "back to main menu" (or close) button. */
+    public static final int SLOT_BACK = 53;
+
+    public static final int CONTENT_ROWS = 5;
+    /** At most 7 cards per row keeps a backdrop-only margin column on each side for a framed look. */
+    public static final int MAX_PER_ROW = 7;
+
+    public static final int CONTENT_CAPACITY = CONTENT_ROWS * MAX_PER_ROW;
+    /** Content-page buttons live in the two margin columns of the top row (never collide with a card). */
+    public static final int SLOT_CONTENT_PREV = 0;
+
+    public static final int SLOT_CONTENT_NEXT = 8;
+
+    // ── Main-menu navigation (the main menu registers itself once) ─────────────────────────────
+    private static volatile Consumer<Player> mainMenuOpener;
+
+    public static void setMainMenu(Consumer<Player> opener) {
+        mainMenuOpener = opener;
+    }
+
+    public static boolean hasMainMenu() {
+        return mainMenuOpener != null;
+    }
+
+    /** Opens the main menu for {@code player}; a no-op until the menu has registered itself. */
+    public static void openMainMenu(Player player) {
+        Consumer<Player> opener = mainMenuOpener;
+        if (opener != null) opener.accept(player);
+    }
+
+    /**
+     * Slot indices for {@code count} content cards laid out centred: rows split as evenly as possible
+     * (10 cards -> 5+5), the block of rows centred vertically and each row horizontally. Reading order;
+     * resolve a clicked slot back with {@code centeredSlots(count).indexOf(slot)}.
+     */
+    public static List<Integer> centeredSlots(int count) {
+        List<Integer> slots = new ArrayList<>();
+        if (count <= 0) return slots;
+        int capped = Math.min(count, CONTENT_CAPACITY);
+        int rows = Math.min(CONTENT_ROWS, (int) Math.ceil(capped / (double) MAX_PER_ROW));
+        int base = capped / rows;
+        int extra = capped % rows;
+        int rowStart = (CONTENT_ROWS - rows) / 2;
+        int placed = 0;
+        for (int r = 0; r < rows && placed < capped; r++) {
+            int itemsThisRow = base + (r < extra ? 1 : 0);
+            int colStart = (9 - itemsThisRow) / 2;
+            for (int c = 0; c < itemsThisRow && placed < capped; c++) {
+                slots.add((rowStart + r) * 9 + colStart + c);
+                placed++;
+            }
+        }
+        return slots;
+    }
+
+    /** Fills the whole content area with a dark pane so cards sit framed rather than floating. */
+    public static void fillContentBackdrop(org.bukkit.inventory.Inventory inv) {
+        ItemStack backdrop = glassFiller(Material.BLACK_STAINED_GLASS_PANE);
+        for (int s = 0; s < PER_PAGE; s++) inv.setItem(s, backdrop);
+    }
+
+    public static void fillFooter(org.bukkit.inventory.Inventory inv) {
+        ItemStack f = glassFiller(Material.GRAY_STAINED_GLASS_PANE);
+        for (int s = PER_PAGE; s < SIZE; s++) inv.setItem(s, f);
+    }
+
+    // ── Text / item helpers ────────────────────────────────────────────────────────────────────
+
+    public static Component text(String plain, TextColor color, boolean bold) {
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(Component.text(plain).color(color).decoration(TextDecoration.BOLD, bold));
+    }
+
+    public static Component smallCaps(String text, TextColor color, boolean bold) {
+        return text(TextUtil.toSmallCaps(text), color, bold);
+    }
+
+    public static Component hint(String icon, String smallCapsText) {
+        return Component.empty()
+                .decoration(TextDecoration.ITALIC, false)
+                .append(Component.text(icon).color(ACCENT))
+                .append(smallCaps(smallCapsText, DARK_GRAY, false));
+    }
+
+    public static void glow(ItemMeta meta) {
+        meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+    }
+
+    public static ItemStack build(Material material, Component displayName, List<Component> lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(displayName);
+        meta.lore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public static ItemStack closeButton() {
+        return build(
+                Material.BARRIER,
+                text("✕  ", OFF_RED, true).append(smallCaps("close", OFF_RED, true)),
+                List.of(smallCaps("close this menu.", DARK_GRAY, false)));
+    }
+
+    public static ItemStack backButton() {
+        return build(
+                Material.SPECTRAL_ARROW,
+                text("◄  ", ACCENT, true).append(smallCaps("main menu", ACCENT, true)),
+                List.of(smallCaps("back to the fpp main menu.", DARK_GRAY, false)));
+    }
+
+    /** Back-to-main-menu when the hub exists, otherwise a plain close button. */
+    public static ItemStack backOrClose() {
+        return hasMainMenu() ? backButton() : closeButton();
+    }
+
+    /** What clicking {@link #backOrClose()} does: open the hub, or just close. */
+    public static void backOrClose(Player player) {
+        if (hasMainMenu()) openMainMenu(player);
+        else player.closeInventory();
+    }
+
+    public static void playOpen(Player player) {
+        play(player, Sound.BLOCK_ENDER_CHEST_OPEN, 0.3f, 1.4f);
+    }
+
+    public static void playSuccess(Player player) {
+        play(player, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 1.2f);
+    }
+
+    public static void playError(Player player) {
+        play(player, Sound.ENTITY_VILLAGER_NO, 0.6f, 1.0f);
+    }
+
+    private static void play(Player player, Sound sound, float volume, float pitch) {
+        try {
+            player.playSound(player.getLocation(), sound, SoundCategory.MASTER, volume, pitch);
+        } catch (Throwable ignored) {
+        }
+    }
 
     /** A generic marker record any GUI can reuse instead of writing its own near-identical holder. */
     public record SimpleHolder(UUID uuid, String kind) implements InventoryHolder {

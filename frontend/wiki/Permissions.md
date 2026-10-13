@@ -59,6 +59,7 @@ server operators, and FPP will always respect it.
 - `fpp.right-click` - right-click automation (use items / interact)
   - `fpp.right-click.start`, `.once`, `.repeat`, `.hold`, `.stop`
 - `fpp.attack` - basic swing/attack
+- `fpp.clear` - `/fpp clear` layer-by-layer excavation (destructive; op by default)
 - `fpp.find` - search-and-mine automation (`/fpp find`)
 - `fpp.storage` - set/manage bot storage targets and deposits
 - `fpp.stop` - cancel all active tasks
@@ -85,6 +86,9 @@ server operators, and FPP will always respect it.
 - `fpp.rent.info` - check remaining rental time (`/fpp rent info`); included in `fpp.use`
 - `fpp.rent.give` - grant rental time without charging (`/fpp rent give`/`clear`) - the console/shop-plugin integration point
 - `fpp.rent.unlimited` - this player's rented bots never expire from time running out
+- `fpp.rent.free` - rent without being charged; `fpp.rent.auto` - auto-renew (in `fpp.use`); `fpp.rent.admin` - list/act on everyone's rentals
+- `fpp.rent.discount.<1-100>` - percent off rental prices (highest wins); `fpp.rent.limit.<1-50>` - max rented bots
+- `fpp.spawn.free` - waive `economy.spawn.price`
 
 ### System
 - `fpp.reload` - hot-reload config, lang, and skin pools

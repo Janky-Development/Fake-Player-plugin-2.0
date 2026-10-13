@@ -132,10 +132,5 @@ public class XpCommand implements FppCommand {
         return System.currentTimeMillis() < cooldownEnd;
     }
 
-    public int getRemainingXpCooldown(UUID botUuid) {
-        Long cooldownEnd = xpCooldowns.get(botUuid);
-        if (cooldownEnd == null) return 0;
-        long remaining = cooldownEnd - System.currentTimeMillis();
-        return remaining > 0 ? (int) Math.ceil(remaining / 1000.0) : 0;
-    }
+
 }

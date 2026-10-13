@@ -172,7 +172,7 @@ public final class HelpGui implements Listener {
             }
         } else if (slot == SLOT_CLOSE) {
             playClick(player, 0.8f);
-            player.closeInventory();
+            GuiKit.backOrClose(player);
         } else if (slot >= CAT_SLOT_START && slot < CAT_SLOT_START + CATEGORIES.length) {
             int ci = slot - CAT_SLOT_START;
             if (ci != session.catIdx()) {
@@ -241,7 +241,7 @@ public final class HelpGui implements Listener {
 
         inv.setItem(SLOT_PAGE_NEXT, page < totalPages - 1 ? buildNavArrow(true, page + 2) : filler);
 
-        inv.setItem(SLOT_CLOSE, buildCloseButton());
+        inv.setItem(SLOT_CLOSE, GuiKit.backOrClose());
 
         pendingRebuild.add(uuid);
         player.openInventory(inv);
@@ -568,19 +568,6 @@ public final class HelpGui implements Listener {
                 .decoration(TextDecoration.ITALIC, false)
                 .append(Component.text(key + "  ").color(DARK_GRAY).decoration(TextDecoration.BOLD, true))
                 .append(Component.text(value).color(GRAY));
-    }
-
-    private static ItemStack buildCloseButton() {
-        ItemStack item = new ItemStack(Material.BARRIER);
-        ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.empty()
-                .decoration(TextDecoration.ITALIC, false)
-                .append(Component.text("✕  ᴄʟᴏꜱᴇ").color(GuiKit.OFF_RED).decoration(TextDecoration.BOLD, true)));
-        meta.lore(List.of(Component.empty()
-                .decoration(TextDecoration.ITALIC, false)
-                .append(Component.text("ᴄʟᴏꜱᴇ ᴛʜɪꜱ ᴍᴇɴᴜ.").color(DARK_GRAY))));
-        item.setItemMeta(meta);
-        return item;
     }
 
     private static ItemStack glassFiller(Material mat) {

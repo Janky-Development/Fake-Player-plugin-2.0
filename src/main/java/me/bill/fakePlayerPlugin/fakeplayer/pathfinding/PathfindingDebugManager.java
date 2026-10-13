@@ -5,6 +5,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
+import me.bill.fakePlayerPlugin.lang.Lang;
+
 /**
  * Tracks which players have opted in to seeing a given bot's live pathfinding route rendered as
  * particles (Baritone-style). Purely a viewer preference - never persisted, never a bot property.
@@ -56,6 +61,26 @@ public final class PathfindingDebugManager {
     public static Set<UUID> getViewers(UUID botUuid) {
         Set<UUID> viewers = viewersByBot.get(botUuid);
         return viewers == null ? Set.of() : viewers;
+    }
+
+    /**
+     * Chat-side counterpart of the particle debug: sent to every viewer subscribed to this bot whenever
+     * something goes wrong (stuck, no path, watchdog, mining stall), so the cause is explained.
+     */
+    public static void sendChat(UUID botUuid, String botName, String langKey, String... args) {
+        Set<UUID> viewers = getViewers(botUuid);
+        if (viewers.isEmpty()) return;
+
+        String[] merged = new String[args.length + 2];
+        merged[0] = "name";
+        merged[1] = botName;
+        System.arraycopy(args, 0, merged, 2, args.length);
+
+        var message = Lang.get(langKey, merged);
+        for (UUID viewerUuid : viewers) {
+            Player viewer = Bukkit.getPlayer(viewerUuid);
+            if (viewer != null && viewer.isOnline()) viewer.sendMessage(message);
+        }
     }
 
     public static void clearBot(UUID botUuid) {

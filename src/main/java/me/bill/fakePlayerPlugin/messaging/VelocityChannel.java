@@ -233,13 +233,7 @@ public final class VelocityChannel implements PluginMessageListener {
         }
     }
 
-    public void broadcastBotDisplayNameUpdate(FakePlayer fp) {
-        if (!Config.isNetworkMode()) return;
-        String msgId = generateAndTrackId();
-        sendPluginMessage(
-                SUBCHANNEL_BOT_UPDATE, msgId, Config.serverId(), fp.getUuid().toString(), fp.getDisplayName());
-        Config.debugNetwork("[VelocityChannel] BOT_UPDATE sent for '" + fp.getName() + "'.");
-    }
+
 
     public void broadcastConfigUpdated(String fileName) {
         if (!Config.isNetworkMode()) return;
@@ -263,11 +257,7 @@ public final class VelocityChannel implements PluginMessageListener {
         }
     }
 
-    public void broadcastJoinToNetwork(FakePlayer fp) {
-        if (!Config.isNetworkMode()) return;
-        String msgId = generateAndTrackId();
-        sendPluginMessage(SUBCHANNEL_JOIN, msgId, fp.getDisplayName(), Config.serverId());
-    }
+
 
     public void broadcastLeaveToNetwork(String displayName) {
         if (!Config.isNetworkMode()) return;
@@ -275,12 +265,7 @@ public final class VelocityChannel implements PluginMessageListener {
         sendPluginMessage(SUBCHANNEL_LEAVE, msgId, displayName, Config.serverId());
     }
 
-    public void broadcastGlobalAlert(String message) {
-        String msgId = generateAndTrackId();
-        broadcastAlertLocally(message);
-        sendPluginMessage(SUBCHANNEL_ALERT, msgId, message);
-        Config.debugNetwork("[VelocityChannel] Global alert sent (id=" + msgId + ").");
-    }
+
 
     public void broadcastResyncRequest() {
         if (!Config.isNetworkMode()) return;
