@@ -125,11 +125,14 @@ economy:
 # When enabled, active bots are saved and restored after server restart/reload.
 # restore-delay-ticks can delay restoration until worlds/plugins finish loading.
 # restore-batch-size controls how many bots are restored per batch.
+# autosave-interval-seconds periodically saves every bot's tasks (with aim point),
+# inventory, XP and settings so a crash loses at most this much (0 = off, min 30).
 # ═══════════════════════════════════════════════════════════════════════════════
 persistence:
   enabled: true
   restore-delay-ticks: 0
   restore-batch-size: 1
+  autosave-interval-seconds: 120
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BOT NAMES

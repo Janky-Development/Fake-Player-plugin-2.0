@@ -247,6 +247,18 @@ public class DatabaseManager {
             + "  PRIMARY KEY (bot_name, server_id)"
             + ")";
 
+    // Safety copy of each live bot's inventory + XP (the YAML file stays the primary store).
+    private static final String CREATE_BOT_INVENTORIES = "CREATE TABLE IF NOT EXISTS fpp_bot_inventories ("
+            + "  bot_uuid       VARCHAR(36)  NOT NULL,"
+            + "  server_id      VARCHAR(64)  NOT NULL DEFAULT 'default',"
+            + "  inventory_data TEXT         DEFAULT NULL,"
+            + "  xp_total       INTEGER      DEFAULT NULL,"
+            + "  xp_level       INTEGER      DEFAULT NULL,"
+            + "  xp_progress    REAL         DEFAULT NULL,"
+            + "  saved_at       BIGINT       NOT NULL,"
+            + "  PRIMARY KEY (bot_uuid, server_id)"
+            + ")";
+
     private static final String CREATE_META = "CREATE TABLE IF NOT EXISTS fpp_meta ("
             + "  key_name VARCHAR(64)  NOT NULL PRIMARY KEY,"
             + "  value    VARCHAR(256) NOT NULL"
@@ -627,6 +639,7 @@ public class DatabaseManager {
         exec(isMysql ? CREATE_TASKS_MYSQL : CREATE_TASKS_SQLITE);
         exec(isMysql ? CREATE_SKIN_CACHE_MYSQL : CREATE_SKIN_CACHE_SQLITE);
         exec(CREATE_DESPAWN_SNAPSHOTS);
+        exec(CREATE_BOT_INVENTORIES);
         exec(CREATE_RENTAL_AUTO);
         exec(CREATE_EXTENSION_DATA);
         exec(CREATE_META);
@@ -2528,6 +2541,116 @@ public class DatabaseManager {
         }
         return list;
     }
+
+    // ── Live bot inventory / XP safety copy ──────────────────────────────────
+
+    /** Upserts inventory blobs (botUuid -> slot encoding, "" = empty inventory) for this server. */
+    public void saveBotInventories(String serverId, Map<String, String> inventories) {
+        if (!isAlive() || inventories.isEmpty()) return;
+        final Map<String, String> snap = new LinkedHashMap<>(inventories);
+        upsertBotState(
+                serverId,
+                snap.keySet(),
+                "inventory_data",
+                "inventory_data=VALUES(inventory_data)",
+                "inventory_data=excluded.inventory_data",
+                (ps, uuid) -> ps.setString(3, snap.get(uuid)),
+                "inventory_data,xp_total,xp_level,xp_progress",
+                "?,NULL,NULL,NULL",
+                4);
+    }
+
+    /** Upserts XP for this server. */
+    public void saveBotXp(String serverId, Map<String, int[]> xp, Map<String, Float> progress) {
+        if (!isAlive() || xp.isEmpty()) return;
+        final Map<String, int[]> snap = new LinkedHashMap<>(xp);
+        final Map<String, Float> prog = new LinkedHashMap<>(progress);
+        upsertBotState(
+                serverId,
+                snap.keySet(),
+                "xp",
+                "xp_total=VALUES(xp_total),xp_level=VALUES(xp_level),xp_progress=VALUES(xp_progress)",
+                "xp_total=excluded.xp_total,xp_level=excluded.xp_level,xp_progress=excluded.xp_progress",
+                (ps, uuid) -> {
+                    int[] v = snap.get(uuid);
+                    ps.setInt(3, v[0]);
+                    ps.setInt(4, v[1]);
+                    ps.setFloat(5, prog.getOrDefault(uuid, 0f));
+                },
+                "inventory_data,xp_total,xp_level,xp_progress",
+                "NULL,?,?,?",
+                6);
+    }
+
+    @FunctionalInterface
+    private interface RowBinder {
+        void bind(PreparedStatement ps, String uuid) throws SQLException;
+    }
+
+    private void upsertBotState(
+            String serverId,
+            java.util.Set<String> uuids,
+            String what,
+            String mysqlUpdate,
+            String sqliteUpdate,
+            RowBinder binder,
+            String columns,
+            String values,
+            int savedAtIdx) {
+        final List<String> ids = new ArrayList<>(uuids);
+        final long savedAt = System.currentTimeMillis();
+        enqueue(() -> {
+            if (!isAlive()) return;
+            String sql = "INSERT INTO fpp_bot_inventories (bot_uuid,server_id," + columns + ",saved_at) VALUES (?,?,"
+                    + values + ",?) "
+                    + (isMysql
+                            ? "ON DUPLICATE KEY UPDATE " + mysqlUpdate + ",saved_at=VALUES(saved_at)"
+                            : "ON CONFLICT(bot_uuid,server_id) DO UPDATE SET " + sqliteUpdate
+                                    + ",saved_at=excluded.saved_at");
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                for (String uuid : ids) {
+                    ps.setString(1, uuid);
+                    ps.setString(2, serverId);
+                    binder.bind(ps, uuid);
+                    ps.setLong(savedAtIdx, savedAt);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                Config.debugDatabase("DB saved " + what + " for " + ids.size() + " bot(s).");
+            } catch (SQLException e) {
+                FppLogger.error("DB save " + what + ": " + e.getMessage());
+            }
+        });
+    }
+
+    /** Synchronous read of every saved inventory/XP row for this server. */
+    public List<BotStateRow> loadBotStateForServer(String serverId) {
+        List<BotStateRow> list = new ArrayList<>();
+        if (!isAlive()) return list;
+        try (PreparedStatement ps = connection.prepareStatement(
+                "SELECT bot_uuid,inventory_data,xp_total,xp_level,xp_progress FROM fpp_bot_inventories"
+                        + " WHERE server_id=?")) {
+            ps.setString(1, serverId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    boolean hasXp = rs.getObject("xp_level") != null;
+                    list.add(new BotStateRow(
+                            rs.getString("bot_uuid"),
+                            rs.getString("inventory_data"),
+                            hasXp,
+                            rs.getInt("xp_total"),
+                            rs.getInt("xp_level"),
+                            rs.getFloat("xp_progress")));
+                }
+            }
+        } catch (SQLException e) {
+            FppLogger.error("DB loadBotStateForServer: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public record BotStateRow(
+            String botUuid, String inventoryData, boolean hasXp, int xpTotal, int xpLevel, float xpProgress) {}
 
     private BotTaskRow mapBotTaskRow(ResultSet rs) throws SQLException {
         String worldName = null;

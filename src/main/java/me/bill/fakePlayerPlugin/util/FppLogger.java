@@ -18,7 +18,7 @@ public final class FppLogger {
     private static final String BOLD = "\u001B[1m";
 
     // FPP 2.0 "Bot Console" palette - violet / lime, see language/en.yml header for the full reference.
-    private static final String BLUE = "\u001B[38;2;167;139;250m"; // violet #A78BFA
+    private static final String VIOLET = "\u001B[38;2;167;139;250m"; // violet #A78BFA
 
     private static final String WHITE = "\u001B[38;2;238;236;247m"; // ink #EEECF7
 
@@ -35,7 +35,7 @@ public final class FppLogger {
 
     private static final String DARK = "\u001B[38;2;95;91;115m"; // mute-2 #5F5B73
 
-    private static final String TAG = BOLD + BLUE + "[ꜰᴘᴘ]" + RESET;
+    private static final String TAG = BOLD + VIOLET + "[ꜰᴘᴘ]" + RESET;
 
     private static final int RULE_WIDTH = 50;
 
@@ -114,7 +114,7 @@ public final class FppLogger {
     public static void kv(String key, Object value) {
         int dots = Math.max(1, KEY_WIDTH - key.length());
         String dotStr = DARK + ".".repeat(dots) + RESET;
-        logger.info(TAG + " " + GRAY + "  " + WHITE + key + " " + dotStr + " " + BLUE + value + RESET);
+        logger.info(TAG + " " + GRAY + "  " + WHITE + key + " " + dotStr + " " + VIOLET + value + RESET);
     }
 
 
@@ -176,7 +176,7 @@ public final class FppLogger {
             int backupCount,
             long startupMs) {
         boldRule();
-        info("  " + BOLD + BLUE + "FakePlayerPlugin" + RESET + WHITE + " v" + version + RESET);
+        info("  " + BOLD + VIOLET + "FakePlayerPlugin" + RESET + WHITE + " v" + version + RESET);
         info("  " + GRAY + "real fake players for Paper & Folia 1.21+" + RESET);
         info("  " + GRAY + "created by " + WHITE + CREATOR + RESET);
         rule();

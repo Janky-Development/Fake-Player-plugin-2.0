@@ -59,7 +59,7 @@ public class InventoryCommand implements FppCommand, Listener {
     private static final TextColor OFF_RED = TextColor.fromHexString("#FF6A5C");
     private static final TextColor VAL_YELLOW = TextColor.fromHexString("#BAFF4F");
 
-    private static final Material LABEL_MAT = Material.LIGHT_BLUE_STAINED_GLASS_PANE;
+    private static final Material LABEL_MAT = Material.PURPLE_STAINED_GLASS_PANE;
     private static final Material BLANK_MAT = Material.GRAY_STAINED_GLASS_PANE;
 
     static {

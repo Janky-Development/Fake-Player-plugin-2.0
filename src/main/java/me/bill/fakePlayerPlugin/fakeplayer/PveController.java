@@ -6,6 +6,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
+import org.bukkit.FluidCollisionMode;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Enemy;
@@ -214,10 +216,14 @@ public final class PveController {
         }
 
         // ── look at it, then let the client pick decide what is really there ──
-        aimAt(bot, nms, target);
-        client.continueAttack(nms, null, false, 5); // attack key is a click, never held
-        HitResult hit = BotClient.pick(nms);
-        boolean inSight = hit instanceof EntityHitResult ehr && isHostileTarget(fp, ehr.getEntity().getBukkitEntity());
+        // No visible part of its hitbox: don't aim at it at all (chase mode walks to a better angle).
+        boolean inSight = false;
+        HitResult hit = null;
+        if (aimAt(bot, nms, target)) {
+            client.continueAttack(nms, null, false, 5); // attack key is a click, never held
+            hit = BotClient.pick(nms);
+            inSight = hit instanceof EntityHitResult ehr && isHostileTarget(fp, ehr.getEntity().getBukkitEntity());
+        }
 
         if (inSight) {
             stopChase(uuid);
@@ -228,6 +234,8 @@ public final class PveController {
         // Not hittable from here: walk to it in chase mode, otherwise hold the post and wait.
         if (fp.getPveSmartAttackMode().movesWhileAttacking()) {
             chase(fp, bot, target, f);
+        } else if (hit == null) {
+            f.target = null; // hidden from a standing bot: let the next scan pick something it can see
         }
     }
 
@@ -265,7 +273,7 @@ public final class PveController {
             if (distSq > rangeSq) continue;
             if (Config.attackRequireLineOfSight()
                     && !fp.getPveSmartAttackMode().movesWhileAttacking()
-                    && !bot.hasLineOfSight(living)) {
+                    && exposedPoint(bot, living) == null) {
                 continue; // a standing bot only wakes for what it can actually see
             }
             double score = nearest ? distSq : living.getHealth() + distSq * 1e-6;
@@ -339,8 +347,40 @@ public final class PveController {
         }
     }
 
-    private static void aimAt(Player bot, ServerPlayer nms, LivingEntity target) {
-        Vector center = target.getBoundingBox().getCenter();
+    /**
+     * A point on the target's hitbox the bot can see without a block in the way: the centre if open, else
+     * the feet / head / corners. Null if no part of the hitbox is exposed. Lets bots hit mobs that only
+     * show their feet (slab/trapdoor farms) instead of locking onto an unreachable centre.
+     */
+    private static @Nullable Vector exposedPoint(Player bot, LivingEntity target) {
+        BoundingBox box = target.getBoundingBox();
+        Location eye = bot.getEyeLocation();
+        Vector from = eye.toVector();
+        double ix = Math.min(0.15, box.getWidthX() / 4), iz = Math.min(0.15, box.getWidthZ() / 4);
+        double iy = Math.min(0.1, box.getHeight() / 4);
+        double[] ys = {box.getCenterY(), box.getMinY() + iy, box.getMaxY() - iy};
+        double[] xs = {box.getCenterX(), box.getMinX() + ix, box.getMaxX() - ix};
+        double[] zs = {box.getCenterZ(), box.getMinZ() + iz, box.getMaxZ() - iz};
+        for (double y : ys) {
+            for (double x : xs) {
+                for (double z : zs) {
+                    Vector p = new Vector(x, y, z);
+                    Vector dir = p.clone().subtract(from);
+                    double dist = dir.length();
+                    if (dist < 1e-6
+                            || bot.getWorld().rayTraceBlocks(eye, dir, dist, FluidCollisionMode.NEVER, true) == null) {
+                        return p;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Turns the bot toward a visible part of the target's hitbox; false (and no turn) if none is visible. */
+    private static boolean aimAt(Player bot, ServerPlayer nms, LivingEntity target) {
+        Vector center = exposedPoint(bot, target);
+        if (center == null) return false;
         Location eye = bot.getEyeLocation();
         double dx = center.getX() - eye.getX();
         double dy = center.getY() - eye.getY();
@@ -349,6 +389,7 @@ public final class PveController {
         float pitch = (float) -Math.toDegrees(Math.atan2(dy, Math.sqrt(dx * dx + dz * dz)));
         nms.absSnapRotationTo(yaw, pitch);
         NmsPlayerSpawner.setHeadYaw(bot, yaw);
+        return true;
     }
 
     // ── Movement ────────────────────────────────────────────────────────────

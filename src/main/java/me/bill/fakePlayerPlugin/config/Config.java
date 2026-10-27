@@ -508,6 +508,11 @@ public final class Config {
         return cfg.getBoolean("left-click.auto-tool-switch", true);
     }
 
+    public static int persistenceAutosaveSeconds() {
+        int s = cfg.getInt("persistence.autosave-interval-seconds", 120);
+        return s <= 0 ? 0 : Math.max(30, s);
+    }
+
     public static boolean persistOnRestart() {
         return cfg.getBoolean("persistence.enabled", true);
     }

@@ -1,5 +1,21 @@
 # Changelog
 
+## v2.1.6 (Beta)
+
+Smarter hunting aim, safer bot persistence and the last of the old blue theme gone.
+
+### Added
+- **Persistence autosave** - every bot's tasks (with aim point), inventory, XP and settings are saved every 2 minutes, so a crash loses at most that much. Config: `persistence.autosave-interval-seconds` (default `120`, `0` = off, minimum `30`).
+- **Inventory / XP database backup** - bot inventories and XP are also written to the plugin database (`fpp_bot_inventories`) and recovered on restart if they are missing from `bot-data.yml`.
+
+### Changed
+- **Hitbox aiming (hunting / PVE)** - bots aim at any exposed part of a mob's hitbox (feet, head, corners) instead of locking onto its center, so they hit mobs in farms that only show their feet. Target scanning uses the same check.
+- **No aiming at hidden mobs** - a mob with no visible part of its hitbox is never aimed at or attacked. Chasing bots walk to a better angle; standing bots drop it and look for another target.
+- **Head look-back off while tasking** - bots no longer turn their head to look at players while hunting, running a click task or walking.
+- **Purple theme** - leftover blue GUI panes (inventory label, Pathfinding and Perf categories) are now purple.
+
+---
+
 ## v2.1.5 (Beta)
 
 Bots now act, fight, mine, walk and load chunks like a real client, with a new pathfinder, reworked GUI and automation commands.

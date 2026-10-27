@@ -295,6 +295,21 @@ public final class FakePlayerPlugin extends JavaPlugin {
         botPersistence = new BotPersistence(this);
         fakePlayerManager.setBotPersistence(botPersistence);
 
+        int autosaveSeconds = Config.persistenceAutosaveSeconds();
+        if (autosaveSeconds > 0 && Config.persistOnRestart()) {
+            long ticks = autosaveSeconds * 20L;
+            // First run after a full interval so restored bots have their inventory/XP back before it snapshots them.
+            FppScheduler.runSyncRepeating(
+                    this,
+                    () -> {
+                        if (fakePlayerManager.isRestorationInProgress()) return;
+                        var bots = fakePlayerManager.getActivePlayers();
+                        if (!bots.isEmpty()) botPersistence.saveFullAsync(bots);
+                    },
+                    ticks,
+                    ticks);
+        }
+
         networkHeartbeat = new NetworkHeartbeatManager(this, fakePlayerManager);
         if (Config.isNetworkMode() && databaseManager != null) {
             networkHeartbeat.start();

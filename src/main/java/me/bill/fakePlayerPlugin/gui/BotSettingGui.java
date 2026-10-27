@@ -2465,7 +2465,7 @@ public final class BotSettingGui implements Listener {
                 "🧭 ᴘᴀᴛʜꜰɪɴᴅɪɴɢ",
                 Material.COMPASS,
                 Material.CLOCK,
-                Material.CYAN_STAINED_GLASS_PANE,
+                Material.PURPLE_STAINED_GLASS_PANE,
                 List.of(
                         BotEntry.toggle(
                                 "show_path",

@@ -50,7 +50,7 @@ believe you have a legitimate use case, open a discussion first - don't lead wit
 
 1. One logical change per PR; keep diffs reviewable.
 2. `./gradlew spotlessApply shadowJar` must pass locally.
-3. Player-facing text goes through `language/en.yml` (small-caps style, `{prefix}`, `#0079FF`
+3. Player-facing text goes through `language/en.yml` (small-caps style, `{prefix}`, `#A78BFA`
    accent) - no hardcoded chat strings in Java.
 4. New config keys need defaults in `config.yml` plus a note in `frontend/wiki/Configuration.md`.
 5. Document behavior changes in `frontend/wiki/Changelog.md`.

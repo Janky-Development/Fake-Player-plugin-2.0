@@ -367,6 +367,57 @@ public final class BotPersistence {
         } catch (IOException e) {
             FppLogger.error("Failed to save bot inventories: " + e.getMessage());
         }
+
+        DatabaseManager db = plugin.getDatabaseManager();
+        if (db != null && !snap.isEmpty()) {
+            Map<String, String> rows = new LinkedHashMap<>();
+            for (Map.Entry<String, Map<String, String>> e : snap.entrySet()) {
+                rows.put(e.getKey(), encodeSlots(e.getValue()));
+            }
+            db.saveBotInventories(Config.serverId(), rows);
+        }
+    }
+
+    // DB form of a slot map: "slot:base64|slot:base64" (base64 never contains ':' or '|'); "" = empty inventory.
+    private static String encodeSlots(Map<String, String> slots) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> e : slots.entrySet()) {
+            if (sb.length() > 0) sb.append('|');
+            sb.append(e.getKey()).append(':').append(e.getValue());
+        }
+        return sb.toString();
+    }
+
+    private static Map<String, String> decodeSlots(String data) {
+        Map<String, String> slots = new LinkedHashMap<>();
+        if (data.isEmpty()) return slots;
+        for (String part : data.split("[|]")) {
+            int i = part.indexOf(':');
+            if (i > 0 && i < part.length() - 1) slots.put(part.substring(0, i), part.substring(i + 1));
+        }
+        return slots;
+    }
+
+    /** Fills inventories/XP missing from the YAML (lost, corrupt, wiped) from the plugin database copy. */
+    private void mergeDbBotState() {
+        DatabaseManager db = plugin.getDatabaseManager();
+        if (db == null) return;
+        int inv = 0, xp = 0;
+        for (DatabaseManager.BotStateRow row : db.loadBotStateForServer(Config.serverId())) {
+            if (row.inventoryData() != null
+                    && loadedInventories.putIfAbsent(row.botUuid(), decodeSlots(row.inventoryData())) == null) {
+                inv++;
+            }
+            if (row.hasXp()
+                    && loadedXp.putIfAbsent(row.botUuid(), new XpEntry(row.xpTotal(), row.xpLevel(), row.xpProgress()))
+                            == null) {
+                xp++;
+            }
+        }
+        if (inv > 0 || xp > 0) {
+            FppLogger.info("Recovered " + inv + " inventor" + (inv == 1 ? "y" : "ies") + " and " + xp
+                    + " XP record(s) from the database (missing in " + BotDataYaml.FILE_NAME + ").");
+        }
     }
 
     private void writeXpSnapshot(Map<String, XpEntry> snap) {
@@ -384,6 +435,17 @@ public final class BotPersistence {
             Config.debug("Saved XP for " + snap.size() + " bot(s).");
         } catch (IOException e) {
             FppLogger.error("Failed to save bot XP: " + e.getMessage());
+        }
+
+        DatabaseManager db = plugin.getDatabaseManager();
+        if (db != null && !snap.isEmpty()) {
+            Map<String, int[]> xp = new LinkedHashMap<>();
+            Map<String, Float> progress = new LinkedHashMap<>();
+            for (Map.Entry<String, XpEntry> e : snap.entrySet()) {
+                xp.put(e.getKey(), new int[] {e.getValue().totalExperience(), e.getValue().level()});
+                progress.put(e.getKey(), e.getValue().progress());
+            }
+            db.saveBotXp(Config.serverId(), xp, progress);
         }
     }
 
@@ -593,6 +655,7 @@ public final class BotPersistence {
 
         loadInventoryFile();
         loadXpFile();
+        mergeDbBotState();
 
         loadTasksFile();
 

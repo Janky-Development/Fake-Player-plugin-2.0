@@ -28,6 +28,7 @@ Seconds between `/fpp spawn` uses. `0` = disabled.
 - `enabled: true` - bots save position on shutdown and rejoin on restart
 - `restore-delay-ticks: 0` - delay before restore starts after plugin enable
 - `restore-batch-size: 1` - bots restored per batch
+- `autosave-interval-seconds: 120` - how often tasks, inventories, XP and settings are saved (`0` = off, minimum `30`)
 
 ### `heartbeat`
 - `enabled: true` - controls whether the network heartbeat manager publishes server status

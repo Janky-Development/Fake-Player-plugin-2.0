@@ -1279,7 +1279,7 @@ public final class SettingGui implements Listener {
                 "📈 ᴘᴇʀꜰ",
                 Material.SPYGLASS,
                 Material.CLOCK,
-                Material.CYAN_STAINED_GLASS_PANE,
+                Material.PURPLE_STAINED_GLASS_PANE,
                 List.of(
                         SettingEntry.toggle(
                                 "performance.enabled",

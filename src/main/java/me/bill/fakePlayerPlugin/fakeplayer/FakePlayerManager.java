@@ -383,6 +383,14 @@ public class FakePlayerManager {
                                     && plugin.getPathfindingService().isNavigating(uuid);
                             boolean isActing = actingBots.containsKey(uuid);
                             boolean isNavLocked = navLockedBots.contains(uuid);
+                            // Hunting / click tasks / walking own the head: no glancing back at players.
+                            var pveTask = plugin.getPveController();
+                            var leftTask = plugin.getLeftClickCommand();
+                            var rightTask = plugin.getRightClickCommand();
+                            boolean isTasking = isNavigating
+                                    || (pveTask != null && pveTask.isActive(uuid))
+                                    || (leftTask != null && leftTask.isClicking(uuid))
+                                    || (rightTask != null && rightTask.isClicking(uuid));
                             boolean hasMiningLock = actionLockedBots.containsKey(uuid);
                             Location before = bot.getLocation();
 
@@ -448,6 +456,7 @@ public class FakePlayerManager {
                                         && fp.isHeadAiEnabled()
                                         && !isNavLocked
                                         && !isActing
+                                        && !isTasking
                                         && onlineCount > 0) {
 
                                     // Head-AI target selection: only track a player who is actively
