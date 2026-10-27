@@ -416,7 +416,8 @@ public final class RentCommand implements FppCommand {
                 sender.sendMessage(Lang.get("rent-bot-not-found", "name", botArg));
                 return true;
             }
-            if (!fp.getSpawnedByUuid().equals(buyer.getUniqueId()) && !Perm.hasAny(sender, Perm.ADMIN, Perm.RENT_ADMIN)) {
+            if (!fp.getSpawnedByUuid().equals(buyer.getUniqueId())
+                    && !Perm.hasAny(sender, Perm.ADMIN, Perm.RENT_ADMIN)) {
                 sender.sendMessage(Lang.get("no-permission"));
                 return true;
             }

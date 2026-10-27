@@ -114,8 +114,15 @@ public final class RentGui implements Listener {
             default -> {
                 subtitle = "rent a bot";
                 for (RentalPackage pkg : packages(viewer)) cards.add(packageCard(viewer, s, pkg, null));
-                if (cards.isEmpty()) cards.add(new Card(simple(Material.BARRIER, "no packages", GuiKit.OFF_RED,
-                        List.of("an admin has not configured any", "rental packages yet.")), () -> {}, false));
+                if (cards.isEmpty())
+                    cards.add(new Card(
+                            simple(
+                                    Material.BARRIER,
+                                    "no packages",
+                                    GuiKit.OFF_RED,
+                                    List.of("an admin has not configured any", "rental packages yet.")),
+                            () -> {},
+                            false));
             }
         }
 
@@ -137,12 +144,22 @@ public final class RentGui implements Listener {
         inv.setItem(GuiKit.SLOT_CREDIT, GuiKit.creditHead(plugin));
         inv.setItem(SLOT_INFO, infoCard(viewer));
         if (s.view != View.SHOP) {
-            inv.setItem(SLOT_NAV, simple(Material.ARROW, s.view == View.BOT ? "my rentals" : "shop", GuiKit.ACCENT,
-                    List.of(s.view == View.BOT ? "back to your rented bots." : "back to the packages.")));
+            inv.setItem(
+                    SLOT_NAV,
+                    simple(
+                            Material.ARROW,
+                            s.view == View.BOT ? "my rentals" : "shop",
+                            GuiKit.ACCENT,
+                            List.of(s.view == View.BOT ? "back to your rented bots." : "back to the packages.")));
         }
         if (s.view != View.RENTALS) {
-            inv.setItem(SLOT_RENTALS, simple(Material.CLOCK, "my rentals", GuiKit.ACCENT,
-                    List.of("your rented bots, time left", "and auto-renew.")));
+            inv.setItem(
+                    SLOT_RENTALS,
+                    simple(
+                            Material.CLOCK,
+                            "my rentals",
+                            GuiKit.ACCENT,
+                            List.of("your rented bots, time left", "and auto-renew.")));
         }
         inv.setItem(GuiKit.SLOT_BACK, GuiKit.backOrClose());
 
@@ -259,12 +276,15 @@ public final class RentGui implements Listener {
         lore.add(GuiKit.hint("◈ ", "click to extend or manage"));
 
         ItemStack item = GuiKit.build(Material.CLOCK, GuiKit.smallCaps(fp.getName(), GuiKit.ACCENT, true), lore);
-        return new Card(item, () -> {
-            s.view = View.BOT;
-            s.bot = fp.getUuid();
-            GuiKit.playUiClick(viewer, 1.2f);
-            build(viewer, s);
-        }, true);
+        return new Card(
+                item,
+                () -> {
+                    s.view = View.BOT;
+                    s.bot = fp.getUuid();
+                    GuiKit.playUiClick(viewer, 1.2f);
+                    build(viewer, s);
+                },
+                true);
     }
 
     private Card autoRenewCard(Player viewer, Session s, FakePlayer fp) {
@@ -293,15 +313,18 @@ public final class RentGui implements Listener {
         if (on) GuiKit.glow(meta);
         item.setItemMeta(meta);
 
-        return new Card(item, () -> {
-            if (!allowed || service == null) {
-                GuiKit.playError(viewer);
-                return;
-            }
-            service.setAutoRenewHours(fp.getUuid(), on ? 0 : Config.rentalAutoRenewDefaultHours());
-            GuiKit.playUiClick(viewer, on ? 0.85f : 1.2f);
-            build(viewer, s);
-        }, allowed);
+        return new Card(
+                item,
+                () -> {
+                    if (!allowed || service == null) {
+                        GuiKit.playError(viewer);
+                        return;
+                    }
+                    service.setAutoRenewHours(fp.getUuid(), on ? 0 : Config.rentalAutoRenewDefaultHours());
+                    GuiKit.playUiClick(viewer, on ? 0.85f : 1.2f);
+                    build(viewer, s);
+                },
+                allowed);
     }
 
     private ItemStack infoCard(Player viewer) {
@@ -313,7 +336,8 @@ public final class RentGui implements Listener {
         boolean unlimitedCap = viewer.hasPermission(Perm.RENT_UNLIMITED);
         lore.add(line(
                 "rented bots",
-                RentalPurchases.rentedCount(plugin, viewer) + "/" + (unlimitedCap ? "∞" : RentalPurchases.rentLimit(viewer))));
+                RentalPurchases.rentedCount(plugin, viewer) + "/"
+                        + (unlimitedCap ? "∞" : RentalPurchases.rentLimit(viewer))));
         double discount = Perm.resolveRentDiscount(viewer);
         if (discount > 0) lore.add(line("your discount", trim(discount) + "%"));
         if (Perm.has(viewer, Perm.RENT_FREE)) lore.add(line("pricing", "free (fpp.rent.free)"));

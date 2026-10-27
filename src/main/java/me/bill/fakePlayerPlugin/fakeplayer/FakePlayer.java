@@ -57,7 +57,6 @@ public final class FakePlayer {
 
     private int deathCount = 0;
 
-
     private Entity nametagEntity = null;
 
     private String packetProfileName = null;
@@ -66,7 +65,6 @@ public final class FakePlayer {
 
     private boolean respawning = false;
     private boolean respawnOnDeath = Config.respawnOnDeath();
-
 
     private transient volatile Object cachedNmsDisplayComponent;
 
@@ -80,7 +78,6 @@ public final class FakePlayer {
     // resolves (success detected, a failure was logged, or auth.pending-timeout-ticks elapses) -
     // see BotAuthManager's own class doc for the full flow.
     private volatile boolean authPending = false;
-
 
     private boolean bodyless = false;
 
@@ -264,8 +261,6 @@ public final class FakePlayer {
         return Duration.between(spawnTime, Instant.now());
     }
 
-
-
     public double getTotalDamageTaken() {
         return totalDamageTaken;
     }
@@ -278,13 +273,9 @@ public final class FakePlayer {
         return alive;
     }
 
-
-
     public boolean isFrozen() {
         return frozen;
     }
-
-
 
     public void addDamageTaken(double amount) {
         totalDamageTaken += amount;
@@ -297,8 +288,6 @@ public final class FakePlayer {
     public void setAlive(boolean alive) {
         this.alive = alive;
     }
-
-
 
     public void setFrozen(boolean frozen) {
         this.frozen = frozen;
@@ -337,14 +326,6 @@ public final class FakePlayer {
     public void clearCachedTabListGameProfile() {
         this.cachedTabListGameProfile = null;
     }
-
-
-
-
-
-
-
-
 
     public void setSpawnLocation(Location loc) {
         this.spawnLocation = loc;
@@ -579,8 +560,6 @@ public final class FakePlayer {
         return nameTagNick;
     }
 
-
-
     public int getPing() {
         return ping;
     }
@@ -601,8 +580,6 @@ public final class FakePlayer {
     public String getTabListName() {
         return tabListName(getName());
     }
-
-
 
     public void setBasePing(int basePing) {
         this.basePing = basePing;
@@ -633,8 +610,6 @@ public final class FakePlayer {
         this.tabListDirty = true;
     }
 
-
-
     public void setSpawnTick(long ms) {
         this.spawnTimeMs = ms;
     }
@@ -646,8 +621,6 @@ public final class FakePlayer {
     public void clearTabListDirty() {
         tabListDirty = false;
     }
-
-
 
     public String getLastRenderedActionLabel() {
         return lastRenderedActionLabel;
@@ -668,8 +641,6 @@ public final class FakePlayer {
     public UUID getSpawnedByUuid() {
         return spawnedByUuid;
     }
-
-
 
     public Instant getSpawnTime() {
         return spawnTime;
@@ -800,8 +771,6 @@ public final class FakePlayer {
         return pveSmartAttackMode.movesWhileAttacking();
     }
 
-
-
     public String getPveMobType() {
         return pveMobTypes.isEmpty() ? null : String.join(",", pveMobTypes);
     }
@@ -833,8 +802,6 @@ public final class FakePlayer {
             return true;
         }
     }
-
-
 
     public Set<UUID> getSharedControllers() {
         return Set.copyOf(sharedControllers);

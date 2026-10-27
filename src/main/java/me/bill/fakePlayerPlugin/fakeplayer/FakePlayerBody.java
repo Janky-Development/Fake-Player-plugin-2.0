@@ -23,8 +23,8 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 
 import me.bill.fakePlayerPlugin.FakePlayerPlugin;
 import me.bill.fakePlayerPlugin.config.Config;
-import me.bill.fakePlayerPlugin.util.AttributeCompat;
 import me.bill.fakePlayerPlugin.fakeplayer.network.ViewerPacketGuard;
+import me.bill.fakePlayerPlugin.util.AttributeCompat;
 import me.bill.fakePlayerPlugin.util.FppLogger;
 import me.bill.fakePlayerPlugin.util.FppScheduler;
 import me.bill.fakePlayerPlugin.util.TextUtil;
@@ -83,7 +83,8 @@ public final class FakePlayerBody {
                 hideTeam = team;
                 ViewerPacketGuard.protect(team, protectedNames);
             } catch (Throwable t2) {
-                FppLogger.warn("FakePlayerBody: failed to build hide-nametag team (vanilla names will show): " + t2.getMessage());
+                FppLogger.warn("FakePlayerBody: failed to build hide-nametag team (vanilla names will show): "
+                        + t2.getMessage());
             }
             return hideTeam;
         }
@@ -224,7 +225,8 @@ public final class FakePlayerBody {
         hideVanillaName(fp);
         try {
             FakePlayerPlugin pl = FakePlayerPlugin.getInstance();
-            if (pl != null && pl.getFakePlayerManager() != null) pl.getFakePlayerManager().unlistBotEverywhere(fp);
+            if (pl != null && pl.getFakePlayerManager() != null)
+                pl.getFakePlayerManager().unlistBotEverywhere(fp);
         } catch (Throwable ignored) {
         }
         if (Config.tabListEnabled()) {
@@ -472,6 +474,7 @@ public final class FakePlayerBody {
 
     /** Row indices, bottom to top. */
     private static final int ROW_OWNER = 0;
+
     private static final int ROW_NAME = 1;
     private static final int ROW_ACTIVITY = 2;
 
@@ -700,8 +703,7 @@ public final class FakePlayerBody {
                         .decoration(TextDecoration.ITALIC, true);
             case ROW_NAME: {
                 String rawName = fp.getRawDisplayName() != null ? fp.getRawDisplayName() : fp.getDisplayName();
-                Component nameRow =
-                        TextUtil.colorize(rawName != null && !rawName.isBlank() ? rawName : fp.getName());
+                Component nameRow = TextUtil.colorize(rawName != null && !rawName.isBlank() ? rawName : fp.getName());
                 if (nameRow.color() == null) nameRow = nameRow.color(TextColor.fromHexString("#A78BFA"));
                 return nameRow;
             }
@@ -709,8 +711,4 @@ public final class FakePlayerBody {
                 return indicatorRow;
         }
     }
-
-
-
-
 }

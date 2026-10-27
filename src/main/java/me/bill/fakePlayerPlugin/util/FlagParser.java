@@ -33,8 +33,6 @@ public final class FlagParser {
         return this;
     }
 
-
-
     public FlagParser parse() {
         Set<String> seen = new LinkedHashSet<>();
         for (int i = 0; i < rawArgs.length; i++) {
@@ -143,8 +141,6 @@ public final class FlagParser {
         assertParsed();
         return Collections.unmodifiableList(positionals);
     }
-
-
 
     private void assertParsed() {
         if (!parsed) throw new IllegalStateException("FlagParser.parse() not yet called");

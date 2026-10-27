@@ -63,5 +63,4 @@ public record ClearRegion(int minX, int minY, int minZ, int maxX, int maxY, int 
         }
         return out;
     }
-
 }

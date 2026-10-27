@@ -61,13 +61,24 @@ public final class MaterialSelector {
             }
             case "stone" -> {
                 return EnumSet.of(
-                        Material.STONE, Material.COBBLESTONE, Material.DEEPSLATE, Material.COBBLED_DEEPSLATE,
-                        Material.ANDESITE, Material.DIORITE, Material.GRANITE, Material.TUFF);
+                        Material.STONE,
+                        Material.COBBLESTONE,
+                        Material.DEEPSLATE,
+                        Material.COBBLED_DEEPSLATE,
+                        Material.ANDESITE,
+                        Material.DIORITE,
+                        Material.GRANITE,
+                        Material.TUFF);
             }
             case "dirt" -> {
                 return EnumSet.of(
-                        Material.DIRT, Material.GRASS_BLOCK, Material.COARSE_DIRT, Material.PODZOL,
-                        Material.ROOTED_DIRT, Material.MYCELIUM, Material.DIRT_PATH);
+                        Material.DIRT,
+                        Material.GRASS_BLOCK,
+                        Material.COARSE_DIRT,
+                        Material.PODZOL,
+                        Material.ROOTED_DIRT,
+                        Material.MYCELIUM,
+                        Material.DIRT_PATH);
             }
             case "sand" -> {
                 return EnumSet.of(Material.SAND, Material.RED_SAND, Material.SANDSTONE, Material.RED_SANDSTONE);

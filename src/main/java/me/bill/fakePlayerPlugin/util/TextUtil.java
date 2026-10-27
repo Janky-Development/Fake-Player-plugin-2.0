@@ -14,8 +14,8 @@ public final class TextUtil {
     private static final MiniMessage MM = MiniMessage.miniMessage();
 
     /** FPP 2.0 "Bot Console" theme - secondary accent (lime), used as the fallback color for untagged text. */
-
     private static final String NORMAL = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
     private static final String SMALL_CAPS = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ" // a–z (26)
             + "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘǫʀꜱᴛᴜᴠᴡxʏᴢ"; // A–Z (26)
 
@@ -49,8 +49,6 @@ public final class TextUtil {
         String converted = legacyToMiniMessage(text);
         return MM.deserialize(converted);
     }
-
-
 
     public static Component format(String text) {
         return colorize(toSmallCaps(text));

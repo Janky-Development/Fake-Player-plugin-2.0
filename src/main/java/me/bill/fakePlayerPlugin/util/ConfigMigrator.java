@@ -172,10 +172,6 @@ public final class ConfigMigrator {
         return true;
     }
 
-
-
-
-
     private static boolean v1to2(YamlConfiguration cfg) {
         if (cfg.contains("update-checker")) return false;
         cfg.set("update-checker.enabled", true);

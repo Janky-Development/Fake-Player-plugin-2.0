@@ -147,9 +147,7 @@ public final class ClearCommand implements FppCommand {
             sender.sendMessage(Lang.get("clear-not-found", "name", args[0]));
             return true;
         }
-        if (sender instanceof Player player
-                && !Perm.has(sender, Perm.ADMIN)
-                && !BotAccess.canAdminister(player, fp)) {
+        if (sender instanceof Player player && !Perm.has(sender, Perm.ADMIN) && !BotAccess.canAdminister(player, fp)) {
             sender.sendMessage(Lang.get("no-permission"));
             return true;
         }
@@ -215,7 +213,8 @@ public final class ClearCommand implements FppCommand {
                     case "--keep" -> {
                         Set<Material> m = MaterialSelector.parse(args[++i]);
                         if (m == null) {
-                            sender.sendMessage(Lang.get("find-invalid-block", "block", MaterialSelector.firstUnknown(args[i])));
+                            sender.sendMessage(
+                                    Lang.get("find-invalid-block", "block", MaterialSelector.firstUnknown(args[i])));
                             return true;
                         }
                         keep.addAll(m);
@@ -224,8 +223,8 @@ public final class ClearCommand implements FppCommand {
                         if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
                             Set<Material> m = MaterialSelector.parse(args[++i]);
                             if (m == null) {
-                                sender.sendMessage(
-                                        Lang.get("find-invalid-block", "block", MaterialSelector.firstUnknown(args[i])));
+                                sender.sendMessage(Lang.get(
+                                        "find-invalid-block", "block", MaterialSelector.firstUnknown(args[i])));
                                 return true;
                             }
                             trash.addAll(m);
@@ -250,8 +249,7 @@ public final class ClearCommand implements FppCommand {
 
         // ── resolve the region ──
         if (useSelection) {
-            if (!(sender instanceof Player p)
-                    || !Bukkit.getPluginManager().isPluginEnabled("WorldEdit")) {
+            if (!(sender instanceof Player p) || !Bukkit.getPluginManager().isPluginEnabled("WorldEdit")) {
                 sender.sendMessage(Lang.get("clear-no-selection"));
                 return true;
             }
@@ -261,13 +259,22 @@ public final class ClearCommand implements FppCommand {
                 return true;
             }
             region = new ClearRegion(
-                    sel[0].getBlockX(), sel[0].getBlockY(), sel[0].getBlockZ(),
-                    sel[1].getBlockX(), sel[1].getBlockY(), sel[1].getBlockZ());
+                    sel[0].getBlockX(),
+                    sel[0].getBlockY(),
+                    sel[0].getBlockZ(),
+                    sel[1].getBlockX(),
+                    sel[1].getBlockY(),
+                    sel[1].getBlockZ());
         } else if (region == null) {
             if (radius != null) {
                 int cx = loc.getBlockX(), cz = loc.getBlockZ();
                 region = new ClearRegion(
-                        cx - radius, world.getMinHeight(), cz - radius, cx + radius, world.getMaxHeight() - 1, cz + radius);
+                        cx - radius,
+                        world.getMinHeight(),
+                        cz - radius,
+                        cx + radius,
+                        world.getMaxHeight() - 1,
+                        cz + radius);
             } else {
                 int[] c = chunkCoords != null ? chunkCoords : new int[] {loc.getBlockX() >> 4, loc.getBlockZ() >> 4};
                 region = ClearRegion.ofChunk(c[0], c[1], world.getMinHeight(), world.getMaxHeight() - 1);
@@ -294,8 +301,10 @@ public final class ClearCommand implements FppCommand {
         if (region.totalCells() > Config.clearMaxCells()) {
             sender.sendMessage(Lang.get(
                     "clear-too-large",
-                    "cells", String.valueOf(region.totalCells()),
-                    "max", String.valueOf(Config.clearMaxCells())));
+                    "cells",
+                    String.valueOf(region.totalCells()),
+                    "max",
+                    String.valueOf(Config.clearMaxCells())));
             return true;
         }
         for (int[] c : region.chunks()) {
@@ -306,19 +315,40 @@ public final class ClearCommand implements FppCommand {
         }
 
         cleanupBot(fp.getUuid());
-        Job job = new Job(fp.getUuid(), world, region, keep, trash, containers, tunnel, build, seal,
+        Job job = new Job(
+                fp.getUuid(),
+                world,
+                region,
+                keep,
+                trash,
+                containers,
+                tunnel,
+                build,
+                seal,
                 sender instanceof Player p ? p.getUniqueId() : null);
         jobs.put(fp.getUuid(), job);
         FppApiImpl.fireTaskEvent(fp, "clear", FppBotTaskEvent.Action.START);
 
         sender.sendMessage(Lang.get(
                 "clear-started",
-                "name", fp.getDisplayName(),
-                "cells", String.valueOf(region.totalCells()),
-                "layers", String.valueOf(region.layers()),
-                "x1", String.valueOf(region.minX()), "z1", String.valueOf(region.minZ()),
-                "x2", String.valueOf(region.maxX()), "z2", String.valueOf(region.maxZ()),
-                "top", String.valueOf(region.maxY()), "bottom", String.valueOf(region.minY())));
+                "name",
+                fp.getDisplayName(),
+                "cells",
+                String.valueOf(region.totalCells()),
+                "layers",
+                String.valueOf(region.layers()),
+                "x1",
+                String.valueOf(region.minX()),
+                "z1",
+                String.valueOf(region.minZ()),
+                "x2",
+                String.valueOf(region.maxX()),
+                "z2",
+                String.valueOf(region.maxZ()),
+                "top",
+                String.valueOf(region.maxY()),
+                "bottom",
+                String.valueOf(region.minY())));
 
         job.taskId = FppScheduler.runAtEntityRepeatingWithId(plugin, bot, () -> tick(fp, job), 1L, 1L);
         return true;
@@ -364,13 +394,20 @@ public final class ClearCommand implements FppCommand {
         int done = Math.max(0, j.region.maxY() - j.layer + (j.layerScanned ? 0 : 1));
         sender.sendMessage(Lang.get(
                 "clear-status",
-                "name", fp.getDisplayName(),
-                "layer", String.valueOf(j.layer),
-                "done", String.valueOf(Math.min(done, total)),
-                "total", String.valueOf(total),
-                "mined", String.valueOf(j.mined),
-                "left", String.valueOf(j.remaining.size()),
-                "skipped", String.valueOf(j.skipped.size())));
+                "name",
+                fp.getDisplayName(),
+                "layer",
+                String.valueOf(j.layer),
+                "done",
+                String.valueOf(Math.min(done, total)),
+                "total",
+                String.valueOf(total),
+                "mined",
+                String.valueOf(j.mined),
+                "left",
+                String.valueOf(j.remaining.size()),
+                "skipped",
+                String.valueOf(j.skipped.size())));
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -419,8 +456,15 @@ public final class ClearCommand implements FppCommand {
             j.layerScanned = false;
             j.lastProgressTick = j.tick;
             if (j.layersDone % Math.max(1, Config.clearProgressEveryLayers()) == 0) {
-                notify(j, "clear-layer-done", "name", fp.getDisplayName(), "layer", String.valueOf(j.layer),
-                        "mined", String.valueOf(j.mined));
+                notify(
+                        j,
+                        "clear-layer-done",
+                        "name",
+                        fp.getDisplayName(),
+                        "layer",
+                        String.valueOf(j.layer),
+                        "mined",
+                        String.valueOf(j.mined));
             }
             return;
         }
@@ -468,7 +512,9 @@ public final class ClearCommand implements FppCommand {
         if (st.hasBlockEntity() && !j.containers) return false;
         Material mat = CraftMagicNumbers.getMaterial(st.getBlock());
         if (j.keep.contains(mat)) return false;
-        return mat != Material.SPAWNER && mat != Material.BEACON && mat != Material.END_PORTAL_FRAME
+        return mat != Material.SPAWNER
+                && mat != Material.BEACON
+                && mat != Material.END_PORTAL_FRAME
                 && mat != Material.REINFORCED_DEEPSLATE;
     }
 
@@ -543,8 +589,7 @@ public final class ClearCommand implements FppCommand {
             return;
         }
         BlockPos hitPos = ((BlockHitResult) hit).getBlockPos();
-        if (!j.region.contains(hitPos.getX(), hitPos.getY(), hitPos.getZ())
-                || !mineable(level, hitPos, j)) {
+        if (!j.region.contains(hitPos.getX(), hitPos.getY(), hitPos.getZ()) || !mineable(level, hitPos, j)) {
             // Something we must not (or cannot) dig is in the way of this cell.
             if (!hitPos.equals(pos)) {
                 skip(j, best);
@@ -623,10 +668,9 @@ public final class ClearCommand implements FppCommand {
                     double ey = y + 1.62 - (target.getY() + 0.5);
                     double ez = z + 0.5 - (target.getZ() + 0.5);
                     if (Math.sqrt(ex * ex + ey * ey + ez * ez) > reach) continue;
-                    double score = Math.sqrt(
-                            Math.pow(x + 0.5 - here.getX(), 2)
-                                    + Math.pow(y - here.getY(), 2) * 2
-                                    + Math.pow(z + 0.5 - here.getZ(), 2));
+                    double score = Math.sqrt(Math.pow(x + 0.5 - here.getX(), 2)
+                            + Math.pow(y - here.getY(), 2) * 2
+                            + Math.pow(z + 0.5 - here.getZ(), 2));
                     if (score < bestScore) {
                         bestScore = score;
                         best = new Location(bot.getWorld(), x + 0.5, y, z + 0.5);
@@ -730,8 +774,8 @@ public final class ClearCommand implements FppCommand {
         BotClient.of(nms).stopDestroyBlock(nms);
         if (pathfinding.isNavigating(fp.getUuid(), PathfindingService.Owner.MINE)) pathfinding.cancel(fp.getUuid());
         j.navigating = false;
-        Config.debugPathfinding("event=CLEAR_RECOVER bot='" + fp.getName() + "' attempt=" + j.recoveries
-                + " layer=" + j.layer);
+        Config.debugPathfinding(
+                "event=CLEAR_RECOVER bot='" + fp.getName() + "' attempt=" + j.recoveries + " layer=" + j.layer);
 
         switch (j.recoveries) {
             case 1 -> {
@@ -785,8 +829,13 @@ public final class ClearCommand implements FppCommand {
 
     private static boolean isKeeper(Material m) {
         String n = m.name();
-        return n.endsWith("_PICKAXE") || n.endsWith("_SHOVEL") || n.endsWith("_AXE") || n.endsWith("_SWORD")
-                || n.endsWith("_HOE") || m.isEdible() || m == Material.SHEARS;
+        return n.endsWith("_PICKAXE")
+                || n.endsWith("_SHOVEL")
+                || n.endsWith("_AXE")
+                || n.endsWith("_SWORD")
+                || n.endsWith("_HOE")
+                || m.isEdible()
+                || m == Material.SHEARS;
     }
 
     /** @return true when this tick was consumed handling a full inventory. */
@@ -911,12 +960,18 @@ public final class ClearCommand implements FppCommand {
         notify(
                 j,
                 complete ? "clear-finished" : "clear-ended",
-                "name", fp.getDisplayName(),
-                "mined", String.valueOf(j.mined),
-                "layers", String.valueOf(j.layersDone),
-                "skipped", String.valueOf(j.skipped.size()),
-                "sealed", String.valueOf(j.sealed),
-                "trashed", String.valueOf(j.trashed));
+                "name",
+                fp.getDisplayName(),
+                "mined",
+                String.valueOf(j.mined),
+                "layers",
+                String.valueOf(j.layersDone),
+                "skipped",
+                String.valueOf(j.skipped.size()),
+                "sealed",
+                String.valueOf(j.sealed),
+                "trashed",
+                String.valueOf(j.trashed));
         cleanupBot(fp.getUuid());
     }
 
@@ -970,8 +1025,21 @@ public final class ClearCommand implements FppCommand {
         }
         if (prev.equals("--depth") || prev.equals("--radius")) return List.of("8", "16", "32");
         for (String f : List.of(
-                "--chunk", "--area", "--selection", "--radius", "--top", "--bottom", "--depth", "--keep", "--trash",
-                "--containers", "--tunnel", "--no-build", "--no-seal", "--status", "--stop")) {
+                "--chunk",
+                "--area",
+                "--selection",
+                "--radius",
+                "--top",
+                "--bottom",
+                "--depth",
+                "--keep",
+                "--trash",
+                "--containers",
+                "--tunnel",
+                "--no-build",
+                "--no-seal",
+                "--status",
+                "--stop")) {
             if (f.startsWith(prefix)) out.add(f);
         }
         return out;

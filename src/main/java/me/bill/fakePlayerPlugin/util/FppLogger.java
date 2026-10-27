@@ -26,7 +26,6 @@ public final class FppLogger {
 
     private static final String GREEN = "\u001B[38;2;186;255;79m"; // lime #BAFF4F
 
-
     private static final String RED = "\u001B[38;2;255;106;92m"; // red #FF6A5C
 
     private static final String GRAY = "\u001B[38;2;150;145;171m"; // mute #9691AB
@@ -116,8 +115,6 @@ public final class FppLogger {
         String dotStr = DARK + ".".repeat(dots) + RESET;
         logger.info(TAG + " " + GRAY + "  " + WHITE + key + " " + dotStr + " " + VIOLET + value + RESET);
     }
-
-
 
     private static void stateRow(RowState state, String label, String detail) {
         String badge;

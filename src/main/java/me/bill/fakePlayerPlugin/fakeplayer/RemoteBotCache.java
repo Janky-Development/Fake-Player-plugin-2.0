@@ -47,16 +47,6 @@ public final class RemoteBotCache {
         serverRealPlayerCounts.put(serverId, Math.max(0, count));
     }
 
-
-
-
-
-
-
-
-
-
-
     // ── Proxy-pushed totals ────────────────────────────────────────────────────
 
     public void setNetworkTotalPlayers(int count) {

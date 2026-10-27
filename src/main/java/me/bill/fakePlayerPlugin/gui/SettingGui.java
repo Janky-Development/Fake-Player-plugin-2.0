@@ -64,6 +64,7 @@ public final class SettingGui implements Listener {
     private static final int SIZE = 54;
     /** Cards per page - laid out centred on a backdrop (the 45-slot grid is only the content area). */
     private static final int SETTINGS_PER_PAGE = GuiKit.CONTENT_CAPACITY;
+
     private static final int SLOT_RESET = 44;
     private static final int SLOT_CAT_PREV = 46;
     private static final int SLOT_CAT_NEXT = 52;
@@ -501,12 +502,10 @@ public final class SettingGui implements Listener {
         if (totalPages > 1) {
             if (pageIdx > 0) {
                 inv.setItem(
-                        GuiKit.SLOT_CONTENT_PREV,
-                        GuiKit.buildPageNavArrow(false, pageIdx, GuiKit.COMING_SOON_COLOR));
+                        GuiKit.SLOT_CONTENT_PREV, GuiKit.buildPageNavArrow(false, pageIdx, GuiKit.COMING_SOON_COLOR));
             }
             if (pageIdx < totalPages - 1) {
-                inv.setItem(
-                        GuiKit.SLOT_CONTENT_NEXT, GuiKit.buildPageNavArrow(true, pageIdx + 2, GuiKit.ON_GREEN));
+                inv.setItem(GuiKit.SLOT_CONTENT_NEXT, GuiKit.buildPageNavArrow(true, pageIdx + 2, GuiKit.ON_GREEN));
             }
         }
 
@@ -1217,12 +1216,14 @@ public final class SettingGui implements Listener {
                         SettingEntry.toggle(
                                 "chunk-loading.enabled",
                                 sc("chunk loading"),
-                                sc("bots behave like afk players: the server\nloads and ticks chunks around them.\noff = bots report the minimum distance."),
+                                sc(
+                                        "bots behave like afk players: the server\nloads and ticks chunks around them.\noff = bots report the minimum distance."),
                                 Material.GRASS_BLOCK),
                         SettingEntry.text(
                                 "chunk-loading.view-distance",
                                 sc("render distance"),
-                                sc("chunks each bot reports, like a client's\nvideo setting. auto = server view\ndistance, 0 = minimum, max 32."),
+                                sc(
+                                        "chunks each bot reports, like a client's\nvideo setting. auto = server view\ndistance, 0 = minimum, max 32."),
                                 Material.SPYGLASS),
                         SettingEntry.cycleInt(
                                 "chunk-loading.update-interval",
@@ -1255,7 +1256,8 @@ public final class SettingGui implements Listener {
                         SettingEntry.text(
                                 "bot-client.skin-parts",
                                 sc("skin layers"),
-                                sc("all, none, or a 0-127 bitmask\n(cape 1, jacket 2, sleeves 4/8,\npants 16/32, hat 64)."),
+                                sc(
+                                        "all, none, or a 0-127 bitmask\n(cape 1, jacket 2, sleeves 4/8,\npants 16/32, hat 64)."),
                                 Material.LEATHER_CHESTPLATE),
                         SettingEntry.text(
                                 "bot-client.particles",

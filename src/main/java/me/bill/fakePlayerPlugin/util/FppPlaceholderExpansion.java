@@ -84,8 +84,8 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
             case "network_count" -> String.valueOf(remoteBots);
             case "max" -> Config.maxBots() == 0 ? "∞" : String.valueOf(Config.maxBots());
             case "real" -> String.valueOf(real);
-            // Bots are never counted as players: "online"/"total" are real players only, so these
-            // placeholders cannot be used to inflate a displayed player count.
+                // Bots are never counted as players: "online"/"total" are real players only, so these
+                // placeholders cannot be used to inflate a displayed player count.
             case "total", "online" -> String.valueOf(real);
             case "network_total" -> {
                 var cache = plugin.getRemoteBotCache();
@@ -284,10 +284,12 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
 
         try {
             if (p.startsWith("rent_price_new_")) {
-                return fmt.apply(quote.apply(Integer.parseInt(p.substring("rent_price_new_".length())), true).total());
+                return fmt.apply(quote.apply(Integer.parseInt(p.substring("rent_price_new_".length())), true)
+                        .total());
             }
             if (p.startsWith("rent_price_")) {
-                return fmt.apply(quote.apply(Integer.parseInt(p.substring("rent_price_".length())), false).total());
+                return fmt.apply(quote.apply(Integer.parseInt(p.substring("rent_price_".length())), false)
+                        .total());
             }
         } catch (NumberFormatException e) {
             return "";
@@ -301,7 +303,8 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
             for (var pkg : Config.rentalPackages()) {
                 if (!pkg.id().equalsIgnoreCase(id)) continue;
                 var q = online != null
-                        ? me.bill.fakePlayerPlugin.economy.RentalPricing.quote(online, pkg.hours(), true, pkg.fixedPrice())
+                        ? me.bill.fakePlayerPlugin.economy.RentalPricing.quote(
+                                online, pkg.hours(), true, pkg.fixedPrice())
                         : me.bill.fakePlayerPlugin.economy.RentalPricing.compute(
                                 pkg.hours(),
                                 Config.rentalPricePerBotSlot(),
@@ -338,9 +341,7 @@ public final class FppPlaceholderExpansion extends PlaceholderExpansion {
             }
             case "rent_balance" -> {
                 var eco = plugin.getEconomyManager();
-                return eco != null && player != null && eco.isAvailable()
-                        ? eco.format(eco.getBalance(player))
-                        : "";
+                return eco != null && player != null && eco.isAvailable() ? eco.format(eco.getBalance(player)) : "";
             }
             case "rental_autorenew" -> {
                 var service = plugin.getRentalService();

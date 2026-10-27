@@ -6,24 +6,23 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiFunction;
+import java.util.function.BooleanSupplier;
+import java.util.function.UnaryOperator;
+
+import me.bill.fakePlayerPlugin.util.FppLogger;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-
-import me.bill.fakePlayerPlugin.util.FppLogger;
-import java.util.UUID;
-import java.util.function.BiFunction;
-import java.util.function.BooleanSupplier;
-import java.util.function.UnaryOperator;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 
 /**
  * Outbound guard on a real viewer's connection that keeps the client's scoreboard-team state
@@ -124,9 +123,18 @@ public final class ViewerPacketGuard extends ChannelOutboundHandlerAdapter {
             Component display = show ? Component.literal(tabListNamer.apply(bot)) : e.displayName();
             if (e.listed() == show && java.util.Objects.equals(display, e.displayName())) continue;
             if (out == null) out = new ArrayList<>(in);
-            out.set(i, new ClientboundPlayerInfoUpdatePacket.Entry(
-                    e.profileId(), e.profile(), show, e.latency(), e.gameMode(), display,
-                    e.showHat(), e.listOrder(), e.chatSession()));
+            out.set(
+                    i,
+                    new ClientboundPlayerInfoUpdatePacket.Entry(
+                            e.profileId(),
+                            e.profile(),
+                            show,
+                            e.latency(),
+                            e.gameMode(),
+                            display,
+                            e.showHat(),
+                            e.listOrder(),
+                            e.chatSession()));
         }
         return out == null ? p : new ClientboundPlayerInfoUpdatePacket(p.actions(), out);
     }

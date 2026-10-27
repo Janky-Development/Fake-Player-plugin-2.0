@@ -24,6 +24,7 @@ import org.bukkit.entity.Player;
 
 import me.bill.fakePlayerPlugin.FakePlayerPlugin;
 import me.bill.fakePlayerPlugin.config.Config;
+import me.bill.fakePlayerPlugin.fakeplayer.network.ViewerPacketGuard;
 import me.bill.fakePlayerPlugin.perf.ProfilerToken;
 import me.bill.fakePlayerPlugin.util.FppLogger;
 
@@ -32,7 +33,6 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
-import me.bill.fakePlayerPlugin.fakeplayer.network.ViewerPacketGuard;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.scores.PlayerTeam;
 
@@ -236,7 +236,6 @@ public final class PacketHelper {
         return ready;
     }
 
-
     public static ProfilerToken profile(String section) {
         FakePlayerPlugin plugin = FakePlayerPlugin.getInstance();
         if (plugin == null) {
@@ -244,12 +243,6 @@ public final class PacketHelper {
         }
         return plugin.getProfiler().enter(section);
     }
-
-
-
-
-
-
 
     public static void sendTabListAdd(Player receiver, FakePlayer fp) {
         if (receiver == null || fp == null) return;
@@ -1192,7 +1185,9 @@ public final class PacketHelper {
             ServerPlayer nms = getServerPlayer(viewer);
             if (nms == null) return;
             installTeamGuard(nms);
-            sendDirect(nms, net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.updateListed(uuid, false));
+            sendDirect(
+                    nms,
+                    net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.updateListed(uuid, false));
         } catch (Throwable t) {
             FppLogger.debug("sendUnlisted failed for " + viewer.getName() + ": " + t);
         }

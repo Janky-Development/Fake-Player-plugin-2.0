@@ -401,8 +401,7 @@ public class SpawnCommand implements FppCommand {
         // Optional spawn price: only the user tier pays, and fpp.spawn.free waives it.
         double unitPrice = isUser && !Perm.has(sender, Perm.SPAWN_FREE) ? Config.spawnPrice() : 0.0;
         double charged = 0.0;
-        me.bill.fakePlayerPlugin.economy.EconomyManager economy =
-                unitPrice > 0 ? plugin().getEconomyManager() : null;
+        me.bill.fakePlayerPlugin.economy.EconomyManager economy = unitPrice > 0 ? plugin().getEconomyManager() : null;
         if (unitPrice > 0) {
             if (economy == null || !economy.isAvailable()) {
                 sender.sendMessage(Lang.get("rent-economy-unavailable"));
@@ -422,8 +421,9 @@ public class SpawnCommand implements FppCommand {
 
         List<FakePlayer> spawned = new ArrayList<>();
         for (int i = 0; i < count; i++) {
-            if (unitPrice > 0 && economy.charge(player, unitPrice, "spawn")
-                    != me.bill.fakePlayerPlugin.economy.EconomyManager.ChargeResult.OK) {
+            if (unitPrice > 0
+                    && economy.charge(player, unitPrice, "spawn")
+                            != me.bill.fakePlayerPlugin.economy.EconomyManager.ChargeResult.OK) {
                 sender.sendMessage(Lang.get("rent-transaction-failed"));
                 break;
             }
@@ -515,7 +515,11 @@ public class SpawnCommand implements FppCommand {
         UUID owner = player != null ? player.getUniqueId() : new UUID(0, 0);
         fp.setMetadata(SpawnActions.KEY, new SpawnActions(owner, player == null, initialDelay, steps));
         sender.sendMessage(Lang.get(
-                "spawn-actions-queued", "name", fp.getName(), "actions", String.join(" → ", new LinkedHashSet<>(names))));
+                "spawn-actions-queued",
+                "name",
+                fp.getName(),
+                "actions",
+                String.join(" → ", new LinkedHashSet<>(names))));
     }
 
     private static String substitute(String token, Map<String, String> vars) {
@@ -607,7 +611,8 @@ public class SpawnCommand implements FppCommand {
                 if (a.equals(THEN)) last = i + 1;
                 else if (a.equals(WAIT)) last = i + 2;
             }
-            if (last >= args.length) return actionNames(sender).stream().sorted().toList();
+            if (last >= args.length)
+                return actionNames(sender).stream().sorted().toList();
             String first = args[last].toLowerCase(Locale.ROOT);
             if (last == args.length - 1) {
                 List<String> out = new ArrayList<>();

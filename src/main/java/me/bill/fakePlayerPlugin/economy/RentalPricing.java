@@ -47,12 +47,7 @@ public final class RentalPricing {
 
     /** Pure pricing math (unit-tested). {@code tiers} are {@code {minHours, percent}} sorted ascending. */
     public static Quote compute(
-            int hours,
-            double slotFee,
-            double perHour,
-            List<int[]> tiers,
-            double permissionDiscount,
-            boolean free) {
+            int hours, double slotFee, double perHour, List<int[]> tiers, double permissionDiscount, boolean free) {
         double hourFee = perHour * Math.max(0, hours);
         double tierDiscount = 0;
         for (int[] tier : tiers) {

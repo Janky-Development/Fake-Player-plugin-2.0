@@ -99,7 +99,14 @@ public final class NavSearch {
     private Status status = Status.RUNNING;
 
     public NavSearch(
-            NavTerrain terrain, PathOptions opts, NavGoal goal, int sx, int sy, int sz, int maxFall, int nodeLimit,
+            NavTerrain terrain,
+            PathOptions opts,
+            NavGoal goal,
+            int sx,
+            int sy,
+            int sz,
+            int maxFall,
+            int nodeLimit,
             int range) {
         this.terrain = terrain;
         this.opts = opts;
@@ -367,7 +374,11 @@ public final class NavSearch {
                 int ny = n.y + dy;
                 if (!clearArc(n, dx, dz, dist, Math.max(n.y, ny))) continue;
                 Entry e = enter(nx, ny, nz, false);
-                if (e == null || e.stance != Stance.GROUND || e.breaks != null || e.doors != null || e.place != NavPath.Node.NONE) {
+                if (e == null
+                        || e.stance != Stance.GROUND
+                        || e.breaks != null
+                        || e.doors != null
+                        || e.place != NavPath.Node.NONE) {
                     continue;
                 }
                 relax(n, nx, ny, nz, Move.PARKOUR, PARKOUR_BASE + PARKOUR_PER_BLOCK * dist + (dy < 0 ? 1.0 : 0.0), e);

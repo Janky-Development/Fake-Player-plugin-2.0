@@ -19,8 +19,6 @@ public final class YamlFileSyncer {
 
     public record SyncResult(String fileName, List<String> keysAdded) {
 
-
-
         public int count() {
             return keysAdded.size();
         }
@@ -120,6 +118,4 @@ public final class YamlFileSyncer {
         }
         return count;
     }
-
-
 }

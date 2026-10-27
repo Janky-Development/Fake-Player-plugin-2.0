@@ -169,10 +169,18 @@ public final class AttackCommand implements FppCommand {
         boolean stop;
         boolean status;
         boolean once;
-        @Nullable Boolean chase;
-        @Nullable Set<String> mobs;
-        @Nullable Double range;
-        @Nullable String priority;
+
+        @Nullable
+        Boolean chase;
+
+        @Nullable
+        Set<String> mobs;
+
+        @Nullable
+        Double range;
+
+        @Nullable
+        String priority;
     }
 
     private @Nullable Options parse(CommandSender sender, String[] args) {
@@ -370,7 +378,15 @@ public final class AttackCommand implements FppCommand {
         Set<String> used = new java.util.HashSet<>();
         for (int i = 1; i < args.length - 1; i++) used.add(args[i].toLowerCase(Locale.ROOT));
         for (String flag : List.of(
-                "--stand", "--chase", "--hostile", "--any", "--mobs", "--range", "--priority", "--once", "--status",
+                "--stand",
+                "--chase",
+                "--hostile",
+                "--any",
+                "--mobs",
+                "--range",
+                "--priority",
+                "--once",
+                "--status",
                 "--stop")) {
             if (!used.contains(flag) && flag.startsWith(prefix)) out.add(flag);
         }

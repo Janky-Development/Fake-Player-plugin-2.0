@@ -102,8 +102,6 @@ public final class BotPersistence {
         save(snapshot);
     }
 
-
-
     public void saveFullAsync(Iterable<FakePlayer> players) {
         if (!asyncSaveQueued.compareAndSet(false, true)) return;
 
@@ -442,7 +440,9 @@ public final class BotPersistence {
             Map<String, int[]> xp = new LinkedHashMap<>();
             Map<String, Float> progress = new LinkedHashMap<>();
             for (Map.Entry<String, XpEntry> e : snap.entrySet()) {
-                xp.put(e.getKey(), new int[] {e.getValue().totalExperience(), e.getValue().level()});
+                xp.put(
+                        e.getKey(),
+                        new int[] {e.getValue().totalExperience(), e.getValue().level()});
                 progress.put(e.getKey(), e.getValue().progress());
             }
             db.saveBotXp(Config.serverId(), xp, progress);
@@ -1114,7 +1114,6 @@ public final class BotPersistence {
             }
 
             manager.persistBotSettings(fp);
-
         }
 
         if (loadedTasks != null) {

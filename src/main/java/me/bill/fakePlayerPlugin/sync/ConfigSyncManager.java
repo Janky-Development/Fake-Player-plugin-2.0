@@ -258,12 +258,6 @@ public final class ConfigSyncManager {
         return count;
     }
 
-
-
-
-
-
-
     private String readFile(File file) throws IOException {
         StringBuilder sb = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -331,9 +325,5 @@ public final class ConfigSyncManager {
         }
     }
 
-    public record SyncStatus(String fileName, String hash, long pushedAt, String serverId, String pushedBy) {
-
-
-
-    }
+    public record SyncStatus(String fileName, String hash, long pushedAt, String serverId, String pushedBy) {}
 }

@@ -43,9 +43,9 @@ import me.bill.fakePlayerPlugin.fakeplayer.PathfindingService;
 import me.bill.fakePlayerPlugin.fakeplayer.StorageInteractionHelper;
 import me.bill.fakePlayerPlugin.fakeplayer.pathfinding.NavController;
 import me.bill.fakePlayerPlugin.fakeplayer.pathfinding.NavTerrain;
+import me.bill.fakePlayerPlugin.lang.Lang;
 import me.bill.fakePlayerPlugin.mining.MaterialSelector;
 import me.bill.fakePlayerPlugin.mining.OreScanner;
-import me.bill.fakePlayerPlugin.lang.Lang;
 import me.bill.fakePlayerPlugin.permission.Perm;
 import me.bill.fakePlayerPlugin.util.FppScheduler;
 
@@ -239,8 +239,8 @@ public final class FindCommand implements FppCommand {
         cleanupBot(fp.getUuid());
 
         UUID starterUuid = sender instanceof Player p ? p.getUniqueId() : null;
-        FindJob job = new FindJob(
-                materials, label, radius, count, preferVisible, starterUuid, sender instanceof Player);
+        FindJob job =
+                new FindJob(materials, label, radius, count, preferVisible, starterUuid, sender instanceof Player);
         job.allowHazards = allowHazards;
 
         if (scanOnly) {
@@ -265,8 +265,6 @@ public final class FindCommand implements FppCommand {
         findAndMineNext(fp, job);
         return true;
     }
-
-
 
     @Override
     public List<String> tabComplete(CommandSender sender, String[] args) {
@@ -375,8 +373,8 @@ public final class FindCommand implements FppCommand {
             double dx = h.x() + 0.5 - origin.getX();
             double dz = h.z() + 0.5 - origin.getZ();
             double dy = h.y() - origin.getY();
-            double score = Math.sqrt(dx * dx + dz * dz) + OreScanner.VERTICAL_WEIGHT * Math.abs(dy)
-                    + (h.hazard() ? 25 : 0);
+            double score =
+                    Math.sqrt(dx * dx + dz * dz) + OreScanner.VERTICAL_WEIGHT * Math.abs(dy) + (h.hazard() ? 25 : 0);
             out.add(new OreScanner.Hit(h.x(), h.y(), h.z(), score, h.hazard()));
         }
         return out;
@@ -479,22 +477,35 @@ public final class FindCommand implements FppCommand {
             FppScheduler.runAtEntity(plugin, bot, () -> {
                 if (hits.isEmpty()) {
                     sender.sendMessage(Lang.get(
-                            "find-scan-none", "name", fp.getDisplayName(), "block", job.label,
-                            "radius", String.valueOf(job.radius)));
+                            "find-scan-none",
+                            "name",
+                            fp.getDisplayName(),
+                            "block",
+                            job.label,
+                            "radius",
+                            String.valueOf(job.radius)));
                     return;
                 }
                 OreScanner.Hit nearest = hits.get(0);
                 long hazards = hits.stream().filter(OreScanner.Hit::hazard).count();
                 sender.sendMessage(Lang.get(
                         "find-scan-result",
-                        "name", fp.getDisplayName(),
-                        "count", String.valueOf(hits.size()),
-                        "block", job.label,
-                        "radius", String.valueOf(job.radius),
-                        "x", String.valueOf(nearest.x()),
-                        "y", String.valueOf(nearest.y()),
-                        "z", String.valueOf(nearest.z()),
-                        "hazards", String.valueOf(hazards)));
+                        "name",
+                        fp.getDisplayName(),
+                        "count",
+                        String.valueOf(hits.size()),
+                        "block",
+                        job.label,
+                        "radius",
+                        String.valueOf(job.radius),
+                        "x",
+                        String.valueOf(nearest.x()),
+                        "y",
+                        String.valueOf(nearest.y()),
+                        "z",
+                        String.valueOf(nearest.z()),
+                        "hazards",
+                        String.valueOf(hazards)));
             });
         });
     }
@@ -597,10 +608,9 @@ public final class FindCommand implements FppCommand {
                     double ez = z + 0.5 - (target.getZ() + 0.5);
                     double toBlock = Math.sqrt(ex * ex + ey * ey + ez * ez);
                     if (toBlock > reach) continue;
-                    double toBot = Math.sqrt(
-                            Math.pow(x + 0.5 - botLoc.getX(), 2)
-                                    + Math.pow(y - botLoc.getY(), 2) * 1.5
-                                    + Math.pow(z + 0.5 - botLoc.getZ(), 2));
+                    double toBot = Math.sqrt(Math.pow(x + 0.5 - botLoc.getX(), 2)
+                            + Math.pow(y - botLoc.getY(), 2) * 1.5
+                            + Math.pow(z + 0.5 - botLoc.getZ(), 2));
                     double score = toBot + toBlock * 0.3;
                     if (score < bestScore) {
                         bestScore = score;
@@ -614,7 +624,9 @@ public final class FindCommand implements FppCommand {
         }
         Location legacy =
                 BotNavUtil.findStandLocation(bot.getWorld(), null, target.getX(), target.getY(), target.getZ());
-        return legacy == null ? null : BotNavUtil.faceToward(legacy, target.getLocation().add(0.5, 0.5, 0.5));
+        return legacy == null
+                ? null
+                : BotNavUtil.faceToward(legacy, target.getLocation().add(0.5, 0.5, 0.5));
     }
 
     /** Walks to {@code faceLoc} (or starts mining at once when already there) for the chosen block. */

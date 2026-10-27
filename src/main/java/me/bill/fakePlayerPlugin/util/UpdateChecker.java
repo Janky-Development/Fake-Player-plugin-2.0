@@ -55,8 +55,6 @@ public final class UpdateChecker {
         });
     }
 
-
-
     public static void handleResultOnMainThread(Plugin plugin, UpdateInfo info) {
         if (info == null) return;
 
@@ -192,8 +190,7 @@ public final class UpdateChecker {
                 conn.setConnectTimeout(10_000);
                 conn.setReadTimeout(30_000);
                 conn.setRequestProperty(
-                        "User-Agent",
-                        "FakePlayerPlugin-AutoUpdate/" + info.current + " (" + MODRINTH_PAGE + ")");
+                        "User-Agent", "FakePlayerPlugin-AutoUpdate/" + info.current + " (" + MODRINTH_PAGE + ")");
                 if (conn.getResponseCode() != 200) {
                     FppLogger.warn("Auto-update download failed: HTTP " + conn.getResponseCode());
                     return;
@@ -267,6 +264,7 @@ public final class UpdateChecker {
         public String downloadUrl;
         /** Primary file of the latest release - set only for Modrinth results. */
         public String fileName;
+
         public String sha512;
         public long fileSize;
     }
@@ -364,10 +362,7 @@ public final class UpdateChecker {
             conn.setReadTimeout(6_000);
             conn.setRequestProperty("Accept", "application/json");
             conn.setRequestProperty(
-                    "User-Agent",
-                    "FakePlayerPlugin-UpdateChecker/"
-                            + currentVersion
-                            + " (" + MODRINTH_PAGE + ")");
+                    "User-Agent", "FakePlayerPlugin-UpdateChecker/" + currentVersion + " (" + MODRINTH_PAGE + ")");
 
             int code = conn.getResponseCode();
             if (code != 200) {
@@ -404,7 +399,8 @@ public final class UpdateChecker {
                     info.fileName = file.has("filename") ? file.get("filename").getAsString() : null;
                     info.fileSize = file.has("size") ? file.get("size").getAsLong() : 0L;
                     if (file.has("hashes") && file.getAsJsonObject("hashes").has("sha512")) {
-                        info.sha512 = file.getAsJsonObject("hashes").get("sha512").getAsString();
+                        info.sha512 =
+                                file.getAsJsonObject("hashes").get("sha512").getAsString();
                     }
                 }
             } else {
@@ -442,7 +438,8 @@ public final class UpdateChecker {
                 com.google.gson.JsonObject o = el.getAsJsonObject();
                 if (!o.has("version_number")) continue;
                 if (first == null) first = o;
-                if (o.has("version_type") && "release".equals(o.get("version_type").getAsString())) return o;
+                if (o.has("version_type")
+                        && "release".equals(o.get("version_type").getAsString())) return o;
             }
             return first;
         } catch (Exception e) {

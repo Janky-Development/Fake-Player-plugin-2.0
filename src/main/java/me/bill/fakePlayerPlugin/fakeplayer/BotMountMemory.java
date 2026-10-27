@@ -211,8 +211,8 @@ public final class BotMountMemory {
                 FppLogger.warn("BotMountMemory: saved " + entry.type + " of " + name + " could not be placed;"
                         + " creating a new one.");
             } catch (Throwable t) {
-                FppLogger.warn("BotMountMemory: saved " + entry.type + " of " + name + " could not be loaded ("
-                        + t + "); creating a new one.");
+                FppLogger.warn("BotMountMemory: saved " + entry.type + " of " + name + " could not be loaded (" + t
+                        + "); creating a new one.");
             }
         }
         try {

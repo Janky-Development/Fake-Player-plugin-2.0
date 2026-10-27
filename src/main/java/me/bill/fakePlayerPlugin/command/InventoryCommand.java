@@ -351,8 +351,6 @@ public class InventoryCommand implements FppCommand, Listener {
         });
     }
 
-
-
     @EventHandler(priority = EventPriority.LOW)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;

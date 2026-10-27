@@ -131,6 +131,4 @@ public class XpCommand implements FppCommand {
         if (cooldownEnd == null) return false;
         return System.currentTimeMillis() < cooldownEnd;
     }
-
-
 }

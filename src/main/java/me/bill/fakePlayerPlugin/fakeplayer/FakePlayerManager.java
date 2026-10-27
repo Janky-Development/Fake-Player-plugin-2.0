@@ -24,9 +24,9 @@ import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
@@ -108,13 +108,11 @@ public class FakePlayerManager {
 
     private volatile List<String> cleanNamePool = Collections.emptyList();
 
-
     private int headAiTickCounter = 0;
 
     private volatile long visualSyncTickCounter = 0L;
 
     private final Set<UUID> bodyTransitionBots = new HashSet<>();
-
 
     private final Map<UUID, Integer> navJumpHolding = new ConcurrentHashMap<>();
 
@@ -742,10 +740,6 @@ public class FakePlayerManager {
         return bodyTransitionBots.contains(uuid);
     }
 
-
-
-
-
     public String getDespawningDisplayName(UUID uuid) {
         return despawningBotIds.get(uuid);
     }
@@ -788,17 +782,9 @@ public class FakePlayerManager {
         syntheticQuitBotIds.add(fp.getUuid());
     }
 
-
-
-
-
     public boolean isRenaming(UUID uuid) {
         return renamingBotIds.contains(uuid);
     }
-
-
-
-
 
     public String formatLocationForDisplay(FakePlayer fp) {
         if (!physicalBodiesEnabled()) {
@@ -826,8 +812,6 @@ public class FakePlayerManager {
                     + sl.getBlockZ();
         return "unknown";
     }
-
-
 
     public int spawn(Location location, int count, Player spawner) {
         return spawn(location, count, spawner, null, false, BotType.AFK);
@@ -1408,9 +1392,8 @@ public class FakePlayerManager {
                     plugin,
                     () -> {
                         if (!activePlayers.containsKey(botUuid)) return;
-                        org.bukkit.command.CommandSender sender = actions.console()
-                                ? Bukkit.getConsoleSender()
-                                : Bukkit.getPlayer(actions.senderUuid());
+                        org.bukkit.command.CommandSender sender =
+                                actions.console() ? Bukkit.getConsoleSender() : Bukkit.getPlayer(actions.senderUuid());
                         if (sender == null) return; // the spawner left before this step came due
                         Bukkit.dispatchCommand(sender, line);
                     },
@@ -2752,10 +2735,6 @@ public class FakePlayerManager {
         return activePlayers.values().stream().map(FakePlayer::getName).collect(Collectors.toList());
     }
 
-
-
-
-
     public FakePlayer getByName(String name) {
         if (name == null || name.isBlank()) return null;
         return nameIndex.get(name.toLowerCase());
@@ -2815,10 +2794,6 @@ public class FakePlayerManager {
         navJumpHolding.remove(botUuid);
     }
 
-
-
-
-
     // Reference-counted rather than a plain Set: with multiple task systems now able to run
     // concurrently on the same bot (mine + PVE + auto-eat + a manual attack, etc.), more than one can
     // hold this lock at once - a boolean set would let whichever one unlocks first wipe it out from
@@ -2864,8 +2839,6 @@ public class FakePlayerManager {
         navLockedBots.remove(botUuid);
     }
 
-
-
     public long getRemainingCooldown(UUID playerUuid) {
         int secs = Config.spawnCooldown();
         if (secs <= 0) return 0;
@@ -2878,8 +2851,6 @@ public class FakePlayerManager {
     public void recordSpawnCooldown(UUID playerUuid) {
         spawnCooldowns.put(playerUuid, System.currentTimeMillis());
     }
-
-
 
     public Collection<FakePlayer> getActivePlayers() {
         return Collections.unmodifiableCollection(activePlayers.values());
@@ -3041,8 +3012,6 @@ public class FakePlayerManager {
         return sanitizeDisplayName(display, botName);
     }
 
-
-
     public void refreshSkinForAll(FakePlayer fp) {
         if (!activePlayers.containsKey(fp.getUuid())) return;
         Player body = fp.getPlayer();
@@ -3128,8 +3097,6 @@ public class FakePlayerManager {
         // with a name hash in the low bits - so a bot never inherits a real account's identity.
         return BotIdentityCache.deterministicBotUuid(botName);
     }
-
-
 
     /**
      * Returns the next available sequential bot name: {@code bot}, {@code bot2}, {@code bot3}, …

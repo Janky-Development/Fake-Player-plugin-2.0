@@ -231,8 +231,6 @@ public final class VelocityChannel implements PluginMessageListener {
         }
     }
 
-
-
     public void broadcastConfigUpdated(String fileName) {
         if (!Config.isNetworkMode()) return;
         String msgId = generateAndTrackId();
@@ -254,11 +252,6 @@ public final class VelocityChannel implements PluginMessageListener {
             Config.debugNetwork("[VelocityChannel] BOT_DESPAWN BungeeCord Forward sent for " + uuid + ".");
         }
     }
-
-
-
-
-
 
     public void broadcastResyncRequest() {
         if (!Config.isNetworkMode()) return;
@@ -426,13 +419,7 @@ public final class VelocityChannel implements PluginMessageListener {
         if (Config.tabListEnabled()) {
             for (Player online : Bukkit.getOnlinePlayers()) {
                 PacketHelper.sendTabListAddRaw(
-                        online,
-                        uuid,
-                        safePacketName,
-                        FakePlayer.tabListName(name),
-                        skinValue,
-                        skinSignature,
-                        ping);
+                        online, uuid, safePacketName, FakePlayer.tabListName(name), skinValue, skinSignature, ping);
             }
         }
     }

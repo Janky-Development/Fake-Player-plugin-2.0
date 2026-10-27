@@ -94,8 +94,8 @@ public final class RentalPurchases {
         }
 
         RentalPricing.Quote quote = RentalPricing.quote(player, hours, true, fixedPrice);
-        FppRentalPurchaseEvent event = new FppRentalPurchaseEvent(
-                player, FppRentalPurchaseEvent.Type.NEW, null, hours, quote.total(), source);
+        FppRentalPurchaseEvent event =
+                new FppRentalPurchaseEvent(player, FppRentalPurchaseEvent.Type.NEW, null, hours, quote.total(), source);
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) return new Result(false, Lang.get("rent-cancelled"));
         double price = event.getPrice();

@@ -6,7 +6,6 @@ import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 
-
 public final class CompatibilityChecker {
 
     private CompatibilityChecker() {}
@@ -58,8 +57,6 @@ public final class CompatibilityChecker {
         FppLogger.debug("Compatibility check skipped - all features enabled (MC " + detectedVersion + ").");
         return new Result(false, true, true, detectedVersion, List.of());
     }
-
-
 
     public static String extractMcVersion() {
         try {

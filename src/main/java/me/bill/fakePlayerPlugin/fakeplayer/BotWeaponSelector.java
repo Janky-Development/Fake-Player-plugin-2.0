@@ -8,8 +8,8 @@ import org.bukkit.inventory.PlayerInventory;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.EquipmentSlotGroup;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
 /**
@@ -29,7 +29,8 @@ public final class BotWeaponSelector {
     public static double score(ItemStack bukkit) {
         if (bukkit == null || bukkit.getType().isAir()) return FIST_SCORE;
         net.minecraft.world.item.ItemStack stack = CraftItemStack.asNMSCopy(bukkit);
-        ItemAttributeModifiers mods = stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        ItemAttributeModifiers mods =
+                stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
 
         double damage = 1.0; // player base
         double speed = 4.0; // player base

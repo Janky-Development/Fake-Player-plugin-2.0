@@ -1941,8 +1941,6 @@ public class DatabaseManager {
         }
     }
 
-
-
     public int countActiveBotRows() {
         if (!isAlive()) return 0;
         try (Statement st = connection.createStatement();
@@ -2202,8 +2200,7 @@ public class DatabaseManager {
         if (!isAlive()) return;
         enqueue(() -> {
             if (!isAlive()) return;
-            try (PreparedStatement del =
-                    connection.prepareStatement("DELETE FROM fpp_rental_auto WHERE bot_uuid=?")) {
+            try (PreparedStatement del = connection.prepareStatement("DELETE FROM fpp_rental_auto WHERE bot_uuid=?")) {
                 del.setString(1, botUuid);
                 del.executeUpdate();
             } catch (SQLException e) {
@@ -2271,8 +2268,6 @@ public class DatabaseManager {
     public boolean isMysql() {
         return isMysql;
     }
-
-
 
     public void setBotExtensionData(String botUuid, String extensionKey, String dataKey, String dataValue) {
         if (!isAlive()) return;

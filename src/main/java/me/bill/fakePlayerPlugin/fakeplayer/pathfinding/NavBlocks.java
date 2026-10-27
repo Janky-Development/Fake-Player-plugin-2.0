@@ -53,8 +53,12 @@ public final class NavBlocks {
                 && m.isSolid()
                 && m.isOccluding()
                 && !m.hasGravity()
-                && !(m.name().contains("CHEST") || m.name().contains("FURNACE") || m.name().contains("TABLE")
-                        || m.name().contains("DOOR") || m.name().contains("BED") || m.name().contains("ANVIL"))
+                && !(m.name().contains("CHEST")
+                        || m.name().contains("FURNACE")
+                        || m.name().contains("TABLE")
+                        || m.name().contains("DOOR")
+                        || m.name().contains("BED")
+                        || m.name().contains("ANVIL"))
                 && !m.name().contains("SHULKER")
                 && !m.name().contains("TNT")
                 && !m.name().contains("ORE")
@@ -138,11 +142,13 @@ public final class NavBlocks {
             Direction face = side.getOpposite(); // face of the support that touches the cell
             if (st.isAir() || !st.isFaceSturdy(nms.level(), support, face)) continue;
 
-            Vec3 hitLoc = Vec3.atCenterOf(support).add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
+            Vec3 hitLoc =
+                    Vec3.atCenterOf(support).add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
             if (eye.distanceTo(hitLoc) > reach) continue;
 
             aim(bot, nms, hitLoc);
-            BotClickDispatcher.useItemOn(nms, InteractionHand.MAIN_HAND, new BlockHitResult(hitLoc, face, support, false));
+            BotClickDispatcher.useItemOn(
+                    nms, InteractionHand.MAIN_HAND, new BlockHitResult(hitLoc, face, support, false));
             BotClickDispatcher.swing(nms, InteractionHand.MAIN_HAND);
             if (!nms.level().getBlockState(cell).isAir()) return true;
         }

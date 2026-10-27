@@ -126,12 +126,16 @@ public final class MainMenuGui implements Listener {
                 p -> Perm.has(p, Perm.SETTINGS),
                 p -> {
                     boolean on = Config.chunkLoadingEnabled();
-                    String view = Config.chunkLoadingRadius() == 0 ? "minimum" : Config.chunkLoadingRadius() + " chunks";
+                    String view =
+                            Config.chunkLoadingRadius() == 0 ? "minimum" : Config.chunkLoadingRadius() + " chunks";
                     return card(
                             Material.GRASS_BLOCK,
                             "chunk loading",
                             on ? GuiKit.ON_GREEN : GuiKit.OFF_RED,
-                            List.of("bots act like afk players: the server", "loads chunks around them. this sets the", "render distance each bot reports."),
+                            List.of(
+                                    "bots act like afk players: the server",
+                                    "loads chunks around them. this sets the",
+                                    "render distance each bot reports."),
                             (on ? "on  •  " : "off  •  ") + view,
                             "◈ click to toggle");
                 },
@@ -146,15 +150,18 @@ public final class MainMenuGui implements Listener {
 
         list.add(new Entry(
                 "rent a bot",
-                p -> Config.rentalGuiEnabled() && plugin.getRentGui() != null && plugin.getRentGui().canOpen(p),
+                p -> Config.rentalGuiEnabled()
+                        && plugin.getRentGui() != null
+                        && plugin.getRentGui().canOpen(p),
                 p -> card(
                         Material.CLOCK,
                         "rent a bot",
                         GuiKit.ACCENT,
                         List.of("rent bots by the hour, extend time", "and set auto-renew."),
-                        "your rentals  " + manager.getBotsOwnedBy(p.getUniqueId()).stream()
-                                .filter(me.bill.fakePlayerPlugin.fakeplayer.FakePlayer::isRented)
-                                .count(),
+                        "your rentals  "
+                                + manager.getBotsOwnedBy(p.getUniqueId()).stream()
+                                        .filter(me.bill.fakePlayerPlugin.fakeplayer.FakePlayer::isRented)
+                                        .count(),
                         "◈ click to open"),
                 (p, c) -> switchTo(p, () -> plugin.getRentGui().open(p))));
 

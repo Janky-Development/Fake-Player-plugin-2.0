@@ -47,6 +47,7 @@ public final class BotListGui implements Listener {
     private static final int SIZE = 54;
     /** Bots per page: centred cards on a backdrop (rows 0-4, 7 per row). */
     private static final int PER_PAGE = GuiKit.CONTENT_CAPACITY;
+
     private static final int SLOT_SORT = 46;
     private static final int SLOT_SEARCH = 47;
     private static final int SLOT_SPAWN = 48;

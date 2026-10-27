@@ -105,8 +105,6 @@ public final class AttributionManager {
         return integrityValid;
     }
 
-
-
     public static boolean validateOriginalAuthor(JavaPlugin plugin) {
         try {
             String expected = getOriginalAuthor();
@@ -145,8 +143,6 @@ public final class AttributionManager {
         for (int c : _A) sum += c;
         return sum == 325;
     }
-
-
 
     public static String formatAuthors(List<String> pluginAuthors) {
         String orig = getOriginalAuthor();

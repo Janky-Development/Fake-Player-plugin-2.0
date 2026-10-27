@@ -248,7 +248,8 @@ public final class NavController implements PathfindingService.Controller {
         int range = (int) Math.min(256, Math.max(Config.pathfindingMaxRange(), horiz + 24));
         int nodeLimit = Math.max(4000, Config.pathfindingMaxNodesExtended() * 4);
 
-        state.search = new NavSearch(state.terrain, opts, goal, sx, sy, sz, Config.pathfindingMaxFall(), nodeLimit, range);
+        state.search =
+                new NavSearch(state.terrain, opts, goal, sx, sy, sz, Config.pathfindingMaxFall(), nodeLimit, range);
         state.searchStartDist = horiz;
         Config.debugPathfinding("event=SEARCH bot='" + fp.getName() + "' reason=" + reason + " from=" + sx + "," + sy
                 + "," + sz + " goal=" + goal.x() + "," + goal.y() + "," + goal.z() + " r=" + goal.radius());
@@ -277,7 +278,8 @@ public final class NavController implements PathfindingService.Controller {
     }
 
     /** @return false when the navigation was terminated. */
-    private boolean finishSearch(FakePlayer fp, NavState state, Location current, NavSearch search, NavSearch.Status s) {
+    private boolean finishSearch(
+            FakePlayer fp, NavState state, Location current, NavSearch search, NavSearch.Status s) {
         if (s == NavSearch.Status.FAILED) {
             state.failedSearches++;
             Config.debugPathfinding(diagnostic(fp, state, "SEARCH_FAILED expanded=" + search.expanded()));
@@ -362,9 +364,15 @@ public final class NavController implements PathfindingService.Controller {
         }
 
         // Fell off the route / got shoved far away: re-plan from where we are.
-        double dev = Math.min(horizontal(px, pz, t.cx(), t.cz()), idx > 0
-                ? horizontal(px, pz, path.get(idx - 1).cx(), path.get(idx - 1).cz())
-                : Double.MAX_VALUE);
+        double dev = Math.min(
+                horizontal(px, pz, t.cx(), t.cz()),
+                idx > 0
+                        ? horizontal(
+                                px,
+                                pz,
+                                path.get(idx - 1).cx(),
+                                path.get(idx - 1).cz())
+                        : Double.MAX_VALUE);
         if (state.search == null && (dev > 3.5 || py < t.y() - 3.5)) {
             beginSearch(fp, state, nms, cur, "OFF_PATH");
         }
@@ -463,8 +471,8 @@ public final class NavController implements PathfindingService.Controller {
         // Sprint when there is a long, simple run ahead.
         boolean sprint = false;
         if (!inWater && !t.needsWork()) {
-            boolean straightMove = move == Move.WALK || move == Move.DIAGONAL || move == Move.PARKOUR
-                    || move == Move.ASCEND;
+            boolean straightMove =
+                    move == Move.WALK || move == Move.DIAGONAL || move == Move.PARKOUR || move == Move.ASCEND;
             boolean nextSafe = next == null
                     || (next.move() != Move.FALL
                             && next.move() != Move.DESCEND
@@ -472,7 +480,9 @@ public final class NavController implements PathfindingService.Controller {
                             && next.move() != Move.CLIMB_DOWN
                             && !next.needsWork());
             double remaining = remaining(path, idx, px, pz);
-            sprint = straightMove && nextSafe && (move == Move.PARKOUR || remaining > Config.pathfindingSprintDistance());
+            sprint = straightMove
+                    && nextSafe
+                    && (move == Move.PARKOUR || remaining > Config.pathfindingSprintDistance());
         }
 
         bot.setSprinting(sprint);
@@ -487,8 +497,14 @@ public final class NavController implements PathfindingService.Controller {
      * jump, and once the feet clear the cell below place a block into it with a real use-item-on packet.
      */
     private void pillar(
-            FakePlayer fp, NavState state, Player bot, ServerPlayer nms, double py, double hd,
-            NavPath.Node prev, NavPath.Node t) {
+            FakePlayer fp,
+            NavState state,
+            Player bot,
+            ServerPlayer nms,
+            double py,
+            double hd,
+            NavPath.Node prev,
+            NavPath.Node t) {
         double cx = t.cx(), cz = t.cz();
         Location cur = bot.getLocation();
         double dx = cx - cur.getX(), dz = cz - cur.getZ();
@@ -511,7 +527,8 @@ public final class NavController implements PathfindingService.Controller {
 
         int baseY = t.y() - 1; // the cell we are leaving (its floor is the support)
         BlockPos cell = new BlockPos(t.x(), baseY, t.z());
-        boolean filled = !nms.level().getBlockState(cell).isAir() && !nms.level().getBlockState(cell).canBeReplaced();
+        boolean filled = !nms.level().getBlockState(cell).isAir()
+                && !nms.level().getBlockState(cell).canBeReplaced();
 
         if (!filled) {
             if (!NavBlocks.equipPlaceable(bot)) {
@@ -565,16 +582,24 @@ public final class NavController implements PathfindingService.Controller {
         for (long packed : t.breaks()) {
             BlockPos p = BlockPos.of(packed);
             if (nms.level().getBlockState(p).isAir()
-                    || nms.level().getBlockState(p).getCollisionShape(nms.level(), p).isEmpty()) {
+                    || nms.level()
+                            .getBlockState(p)
+                            .getCollisionShape(nms.level(), p)
+                            .isEmpty()) {
                 continue;
             }
             // Look at it and hold the attack key - the same dig a player's mouse produces.
             faceBlock(bot, nms, p);
             HitResult hit = BotClient.pick(nms);
-            if (hit instanceof BlockHitResult bh && hit.getType() == HitResult.Type.BLOCK && !bh.getBlockPos().equals(p)) {
+            if (hit instanceof BlockHitResult bh
+                    && hit.getType() == HitResult.Type.BLOCK
+                    && !bh.getBlockPos().equals(p)) {
                 // Something else is in front of it; only dig that if the pathfinder may break it too.
                 state.terrain.refresh();
-                var c = state.terrain.cell(bh.getBlockPos().getX(), bh.getBlockPos().getY(), bh.getBlockPos().getZ());
+                var c = state.terrain.cell(
+                        bh.getBlockPos().getX(),
+                        bh.getBlockPos().getY(),
+                        bh.getBlockPos().getZ());
                 if (!c.breakable) {
                     client.stopDestroyBlock(nms);
                     fail(fp, state, "WORK_BLOCKED");
@@ -643,10 +668,11 @@ public final class NavController implements PathfindingService.Controller {
             if (n.needsWork()) continue; // handled (and re-evaluated) by the work step
             Stance s = state.terrain.stance(n.x(), n.y(), n.z(), avoidWater);
             if (s == Stance.INVALID) return false;
-            boolean needsFooting = switch (n.move()) {
-                case WALK, DIAGONAL, ASCEND, PARKOUR, DESCEND, FALL -> true;
-                default -> false;
-            };
+            boolean needsFooting =
+                    switch (n.move()) {
+                        case WALK, DIAGONAL, ASCEND, PARKOUR, DESCEND, FALL -> true;
+                        default -> false;
+                    };
             if (needsFooting && s == Stance.AIR) return false;
         }
         return true;
@@ -811,9 +837,16 @@ public final class NavController implements PathfindingService.Controller {
         final PathfindingService.NavigationRequest request;
         final PathfindingService.Owner owner;
         volatile int taskId = -1;
-        @Nullable NavTerrain terrain;
-        @Nullable NavSearch search;
-        @Nullable NavPath path;
+
+        @Nullable
+        NavTerrain terrain;
+
+        @Nullable
+        NavSearch search;
+
+        @Nullable
+        NavPath path;
+
         int index;
         Location lastTarget;
         Location lastPos;

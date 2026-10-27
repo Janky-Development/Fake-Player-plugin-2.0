@@ -10,7 +10,4 @@ public record RemoteBotEntry(
         String packetProfileName,
         String skinValue,
         String skinSignature,
-        int ping) {
-
-
-}
+        int ping) {}

@@ -39,7 +39,6 @@ public final class BotIdentityCache {
     /** Same prefix, low bit set: marks a custom-named bot whose low 64 bits are a name hash. */
     private static final long UUID_MSB_NAMED = 0xFB07_0000_0000_0001L;
 
-
     /**
      * Deterministic bot UUID, derived from the name alone - no storage, no Mojang contact.
      *
@@ -55,8 +54,6 @@ public final class BotIdentityCache {
         if (seq > 0) return new UUID(UUID_MSB_SEQUENTIAL, seq);
         return new UUID(UUID_MSB_NAMED, nameHash64(botName));
     }
-
-
 
     /**
      * The bot number when (and only when) the name is exactly what {@code nextSequentialName}

@@ -64,7 +64,8 @@ public final class ChunkLoader {
             lastChunk.put(fp.getUuid(), new long[] {cx, cz});
             if (bot.getWorld().isChunkLoaded(cx, cz)) {
                 Bukkit.getPluginManager()
-                        .callEvent(new FppBotChunkLoadEvent(new FppBotImpl(fp), bot.getWorld().getChunkAt(cx, cz)));
+                        .callEvent(new FppBotChunkLoadEvent(
+                                new FppBotImpl(fp), bot.getWorld().getChunkAt(cx, cz)));
             }
         }
     }

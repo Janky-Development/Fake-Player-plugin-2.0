@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.FluidCollisionMode;
-import org.bukkit.util.BoundingBox;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Enemy;
@@ -15,6 +14,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Tameable;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -65,6 +65,7 @@ public final class PveController {
     private final Map<UUID, Fight> fights = new ConcurrentHashMap<>();
     /** Bots that should disable themselves after their first landed attack ({@code /fpp attack --once}). */
     private final Set<UUID> once = ConcurrentHashMap.newKeySet();
+
     private int supervisorTaskId = -1;
 
     /** Per-bot fight state. */
@@ -222,7 +223,8 @@ public final class PveController {
         if (aimAt(bot, nms, target)) {
             client.continueAttack(nms, null, false, 5); // attack key is a click, never held
             hit = BotClient.pick(nms);
-            inSight = hit instanceof EntityHitResult ehr && isHostileTarget(fp, ehr.getEntity().getBukkitEntity());
+            inSight = hit instanceof EntityHitResult ehr
+                    && isHostileTarget(fp, ehr.getEntity().getBukkitEntity());
         }
 
         if (inSight) {
@@ -314,8 +316,8 @@ public final class PveController {
         // A client cannot swing while it is eating/drinking/blocking.
         if (nms.isUsingItem()) return;
 
-        boolean charged = nms.getAttackStrengthScale(0.0F) >= 1.0F
-                && !nms.cannotAttackWithItem(nms.getMainHandItem(), 0);
+        boolean charged =
+                nms.getAttackStrengthScale(0.0F) >= 1.0F && !nms.cannotAttackWithItem(nms.getMainHandItem(), 0);
 
         if (Config.attackCriticals()) {
             // Vanilla critical: falling, not on ground, not climbing/swimming, full charge.

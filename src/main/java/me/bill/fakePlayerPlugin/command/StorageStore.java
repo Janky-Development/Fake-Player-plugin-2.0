@@ -185,8 +185,6 @@ public final class StorageStore {
         return count;
     }
 
-
-
     public int renameBot(String oldName, String newName) {
         String oldKey = oldName.toLowerCase(Locale.ROOT);
         String newKey = newName.toLowerCase(Locale.ROOT);

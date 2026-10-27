@@ -3,7 +3,6 @@ package me.bill.fakePlayerPlugin.config;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -987,8 +986,18 @@ public final class Config {
         var list = cfg.getStringList("clear.default-trash");
         return list.isEmpty()
                 ? java.util.List.of(
-                        "COBBLESTONE", "COBBLED_DEEPSLATE", "DIRT", "GRAVEL", "STONE", "DEEPSLATE", "ANDESITE",
-                        "DIORITE", "GRANITE", "TUFF", "NETHERRACK", "SAND")
+                        "COBBLESTONE",
+                        "COBBLED_DEEPSLATE",
+                        "DIRT",
+                        "GRAVEL",
+                        "STONE",
+                        "DEEPSLATE",
+                        "ANDESITE",
+                        "DIORITE",
+                        "GRANITE",
+                        "TUFF",
+                        "NETHERRACK",
+                        "SAND")
                 : list;
     }
 

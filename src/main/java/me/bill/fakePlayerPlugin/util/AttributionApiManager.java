@@ -74,8 +74,6 @@ public final class AttributionApiManager {
         });
     }
 
-
-
     public static boolean hasData() {
         return apiFetched && apiData != null;
     }

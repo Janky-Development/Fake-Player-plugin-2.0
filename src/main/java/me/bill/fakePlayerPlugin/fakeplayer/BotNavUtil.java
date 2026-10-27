@@ -11,7 +11,6 @@ import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -67,8 +66,6 @@ public final class BotNavUtil {
         loc.setPitch((float) -Math.toDegrees(Math.atan2(dy, xz)));
         return loc;
     }
-
-
 
     /**
      * True when a bot can stand with its feet in {@code (x,y,z)} - decided by the pathfinder's own

@@ -56,7 +56,6 @@ dependencies {
     // make the whole plugin fail to build for anyone without a private copy of nLogin.jar. See
     // compat.nlogin.NLoginIntegration: it resolves nLogin's API entirely through reflection at
     // runtime instead, so this build has nothing to depend on and nothing to add here.
-
 }
 
 // -- Build ID -----------------------------------------------------------------------------------
@@ -64,26 +63,32 @@ dependencies {
 // util/BuildInfo and shown in the startup banner, /fpp and the GUI credit head - so a jar can always
 // be told apart from another with the same version. Format: D<yyMMdd>-<HHmmss UTC>-<4 random hex>.
 val buildInfoFile = layout.buildDirectory.file("generated/buildinfo/fpp-build.properties")
-val generateBuildInfo = tasks.register("generateBuildInfo") {
-    description = "Generates a fresh build ID (runs on every build - never up-to-date)."
-    val outFile = buildInfoFile.get().asFile
-    outputs.file(outFile)
-    outputs.upToDateWhen { false }
-    val versionString = project.version.toString()
-    doLast {
-        outFile.parentFile.mkdirs()
-        val stamp = ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyMMdd-HHmmss"))
-        val rnd = UUID.randomUUID().toString().replace("-", "").take(4)
-        outFile.writeText(
-            "build-id=D" + stamp + "-" + rnd + "\n" +
-                "build-type=dev\n" +
-                "build-time=" + Instant.now() + "\n" +
-                "version=" + versionString + "\n",
-            Charsets.UTF_8,
-        )
-        logger.lifecycle("generateBuildInfo: " + outFile.readLines().first())
+val generateBuildInfo =
+    tasks.register("generateBuildInfo") {
+        description = "Generates a fresh build ID (runs on every build - never up-to-date)."
+        val outFile = buildInfoFile.get().asFile
+        outputs.file(outFile)
+        outputs.upToDateWhen { false }
+        val versionString = project.version.toString()
+        doLast {
+            outFile.parentFile.mkdirs()
+            val stamp = ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyMMdd-HHmmss"))
+            val rnd =
+                UUID
+                    .randomUUID()
+                    .toString()
+                    .replace("-", "")
+                    .take(4)
+            outFile.writeText(
+                "build-id=D" + stamp + "-" + rnd + "\n" +
+                    "build-type=dev\n" +
+                    "build-time=" + Instant.now() + "\n" +
+                    "version=" + versionString + "\n",
+                Charsets.UTF_8,
+            )
+            logger.lifecycle("generateBuildInfo: " + outFile.readLines().first())
+        }
     }
-}
 
 tasks.processResources {
     dependsOn(generateBuildInfo)

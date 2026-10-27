@@ -154,8 +154,6 @@ public final class FppScheduler {
         return register(task);
     }
 
-
-
     private static boolean isFolia() {
         try {
             Class.forName("io.papermc.paper.threadedregions.ThreadedRegionizer");

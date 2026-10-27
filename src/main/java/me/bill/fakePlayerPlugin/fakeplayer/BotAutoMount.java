@@ -133,8 +133,11 @@ public final class BotAutoMount implements Listener {
         if (!isCandidateVehicle(vehicle)) return;
         if (allowExit.contains(bot.getUniqueId())) return;
         if (!vehicle.isValid() || vehicle.isDead() || bot.isDead()) return;
-        if (bot.isSneaking() || bot.isUnderWater() || vehicle.isInWater() && vehicle.getLocation().getBlock().isLiquid()
-                && bot.getEyeLocation().getBlock().isLiquid()) return;
+        if (bot.isSneaking()
+                || bot.isUnderWater()
+                || vehicle.isInWater()
+                        && vehicle.getLocation().getBlock().isLiquid()
+                        && bot.getEyeLocation().getBlock().isLiquid()) return;
         event.setCancelled(true);
         FppLogger.debug("BotAutoMount: kept " + bot.getName() + " seated on " + vehicle.getType());
     }
@@ -161,7 +164,10 @@ public final class BotAutoMount implements Listener {
             int max = boat instanceof ChestBoat ? 1 : 2;
             for (Player b : bots) {
                 try {
-                    if (boat.isValid() && b.isValid() && !b.isInsideVehicle() && boat.getPassengers().size() < max) {
+                    if (boat.isValid()
+                            && b.isValid()
+                            && !b.isInsideVehicle()
+                            && boat.getPassengers().size() < max) {
                         boat.addPassenger(b);
                     }
                 } finally {
@@ -257,8 +263,7 @@ public final class BotAutoMount implements Listener {
             try {
                 Location now = bot.getLocation();
                 Location target = now;
-                if (now.getWorld() == from.getWorld()
-                        && now.distanceSquared(from) <= now.distanceSquared(to)) {
+                if (now.getWorld() == from.getWorld() && now.distanceSquared(from) <= now.distanceSquared(to)) {
                     target = now.clone().add(to.getX() - from.getX(), to.getY() - from.getY(), to.getZ() - from.getZ());
                 }
                 FakePlayerBody.moveNametag(fp, target);

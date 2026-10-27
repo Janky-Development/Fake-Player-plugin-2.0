@@ -200,23 +200,9 @@ public class BotRecord {
         return spawnPitch;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
     public Instant getSpawnedAt() {
         return spawnedAt;
     }
-
-
 
     public String getRemoveReason() {
         return removeReason;

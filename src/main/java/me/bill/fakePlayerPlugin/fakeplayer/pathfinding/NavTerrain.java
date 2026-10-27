@@ -249,5 +249,4 @@ public class NavTerrain {
         if (below.water) return avoidWater ? Stance.INVALID : Stance.AIR; // land on the surface = swim
         return Stance.AIR;
     }
-
 }

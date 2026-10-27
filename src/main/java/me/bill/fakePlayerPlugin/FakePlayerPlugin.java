@@ -648,8 +648,6 @@ public final class FakePlayerPlugin extends JavaPlugin {
         return botPersistence;
     }
 
-
-
     public BotSettingGui getBotSettingGui() {
         return botSettingGui;
     }
@@ -661,8 +659,6 @@ public final class FakePlayerPlugin extends JavaPlugin {
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
     }
-
-
 
     public VelocityChannel getVelocityChannel() {
         return velocityChannel;
@@ -719,18 +715,14 @@ public final class FakePlayerPlugin extends JavaPlugin {
     public FindCommand getFindCommand() {
         return findCommand;
     }
+
     public me.bill.fakePlayerPlugin.command.ClearCommand getClearCommand() {
         return clearCommand;
     }
 
-
     public PathfindingService getPathfindingService() {
         return pathfindingService;
     }
-
-
-
-
 
     public SkinManager getSkinManager() {
         return skinManager;
@@ -739,10 +731,6 @@ public final class FakePlayerPlugin extends JavaPlugin {
     public SkinPoolService getSkinPoolService() {
         return skinPoolService;
     }
-
-
-
-
 
     public Component getUpdateNotification() {
         return updateNotificationMessage;

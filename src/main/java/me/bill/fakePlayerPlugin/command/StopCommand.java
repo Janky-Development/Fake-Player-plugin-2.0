@@ -37,6 +37,7 @@ public final class StopCommand implements FppCommand {
 
     @Nullable
     private FindCommand findCommand;
+
     private ClearCommand clearCommand;
 
     // ── Constructor ──────────────────────────────────────────────────────────
