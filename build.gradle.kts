@@ -26,7 +26,7 @@ tasks.compileJava {
 }
 
 group = "me.bill.fpp"
-version = "2.1.6"
+version = "2.1.7"
 
 repositories {
     mavenCentral()
@@ -38,7 +38,7 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("26.1.2.build.65-stable")
+    paperweight.paperDevBundle("26.3.build.227-stable")
 
     implementation("dev.faststats.metrics:bukkit:0.22.0")
 

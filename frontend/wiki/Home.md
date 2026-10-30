@@ -47,7 +47,7 @@ as `[Bot] - name` if an admin enables it), are never counted as players, always 
 
 ---
 
-## Latest Version: v2.1.6
+## Latest Version: v2.1.7
 
 **Highlights:**
 - 🖱️ **Client-authentic actions** - left/right-click are a port of the 26.3 client's own click logic: real

@@ -283,7 +283,7 @@ public final class FakeServerGamePacketListenerImpl extends ServerGamePacketList
     }
 
     private void markVelocityChanged() {
-        this.player.hurtMarked = true;
+        this.player.syncVelocity = true;
         try {
             if (hasImpulseField == null) {
                 hasImpulseField = findField(ServerPlayer.class, "hasImpulse", boolean.class);

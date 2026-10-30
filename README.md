@@ -8,7 +8,7 @@
 
 **AFK farms · mining · mob grinders · automation · bot rentals**
 
-[![Version](https://img.shields.io/badge/version-2.1.6-A78BFA?style=for-the-badge)](https://modrinth.com/plugin/fake-player-plugin-fpp)
+[![Version](https://img.shields.io/badge/version-2.1.7-A78BFA?style=for-the-badge)](https://modrinth.com/plugin/fake-player-plugin-fpp)
 [![Paper](https://img.shields.io/badge/Paper%20·%20Purpur%20·%20Folia-1.21+-BAFF4F?style=for-the-badge&labelColor=1a1626)](https://modrinth.com/plugin/fake-player-plugin-fpp)
 [![Java](https://img.shields.io/badge/Java-21+-A78BFA?style=for-the-badge&labelColor=1a1626)](#-requirements)
 [![License](https://img.shields.io/badge/license-MIT-BAFF4F?style=for-the-badge&labelColor=1a1626)](https://github.com/Pepe-tf/Fake-Player-plugin-2.0)

@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.1.7 (Beta)
+
+Paper 26.3 support - fixes bot left/right-click doing nothing.
+
+### Fixed
+- **Left/right-click did nothing on Paper 26.3** - the plugin was built for 26.1.2. The accept-teleport packet now carries position and rotation in 26.3, so the server refused every bot block click; the dispatcher now sends the new format.
+- **`PacketHelper init failed: PLAYER not found in EntityType`** - entity type constants moved from `EntityType` to `EntityTypes` in 26.3. The lookup now falls back to it, so bot tab-list packets work again.
+- **Arm swing after storage use** - uses the Bukkit API (`swingMainHand`) since the old NMS swing call no longer exists.
+- **Knockback velocity sync** - switched to the renamed `syncVelocity` flag.
+
+### Changed
+- **Build target** - compiled against Paper `26.3.build.227-stable`.
+
+### Removed
+- **Internal bed-sleep helper** - `NmsPlayerSpawner.startSleepInBed` called a method that no longer exists in 26.3. It had no callers.
+
+---
+
 ## v2.1.6 (Beta)
 
 Smarter hunting aim, safer bot persistence and the last of the old blue theme gone.

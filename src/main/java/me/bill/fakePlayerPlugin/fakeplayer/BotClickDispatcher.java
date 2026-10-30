@@ -324,7 +324,10 @@ public final class BotClickDispatcher {
             if (awaitingPosField == null || awaitingTeleportIdField == null) return;
             if (awaitingPosField.get(nms.connection) == null) return;
             int pendingId = awaitingTeleportIdField.getInt(nms.connection);
-            new ServerboundAcceptTeleportationPacket(pendingId).handle(nms.connection);
+            Vec3 awaited = (Vec3) awaitingPosField.get(nms.connection);
+            new ServerboundAcceptTeleportationPacket(
+                            pendingId, awaited.x, awaited.y, awaited.z, nms.getYRot(), nms.getXRot())
+                    .handle(nms.connection);
             Config.debugNms("BotClickDispatcher: confirmed pending teleport id=" + pendingId + " for "
                     + nms.getScoreboardName());
         } catch (Throwable t) {

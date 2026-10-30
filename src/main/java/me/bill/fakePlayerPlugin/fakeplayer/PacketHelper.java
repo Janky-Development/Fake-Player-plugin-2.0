@@ -166,7 +166,12 @@ public final class PacketHelper {
             vec3Zero = scanStaticField(vec3Class, "ZERO");
 
             entityTypeClass = nmsLoader.loadClass("net.minecraft.world.entity.EntityType");
-            entityTypePlayer = scanStaticField(entityTypeClass, "PLAYER");
+            try {
+                entityTypePlayer = scanStaticField(entityTypeClass, "PLAYER");
+            } catch (NoSuchFieldException e) {
+                // 26.3 moved the entity type constants out of EntityType into EntityTypes
+                entityTypePlayer = scanStaticField(nmsLoader.loadClass("net.minecraft.world.entity.EntityTypes"), "PLAYER");
+            }
 
             playerInfoUpdateCtor = findPlayerInfoUpdateCtor();
             if (playerInfoUpdateCtor == null)

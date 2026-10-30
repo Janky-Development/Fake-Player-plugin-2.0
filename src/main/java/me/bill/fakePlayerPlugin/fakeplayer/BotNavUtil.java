@@ -162,7 +162,7 @@ public final class BotNavUtil {
             nms.resetLastActionTime();
             var result = NmsPlayerSpawner.useItemOn(nms, InteractionHand.MAIN_HAND, hit);
             if (NmsPlayerSpawner.consumesAction(result)) {
-                nms.swing(InteractionHand.MAIN_HAND);
+                bot.swingMainHand();
             }
         } catch (Throwable ignored) {
         }

@@ -2392,22 +2392,9 @@ public final class NmsPlayerSpawner {
 
     // ── startSleepInBed ──
 
-    private static volatile int sleepProbeState;
     private static volatile Method sleepReflect;
 
     public static void startSleepInBed(ServerPlayer nms, BlockPos pos, boolean force) {
-        if (sleepProbeState == 0) {
-            try {
-                nms.startSleepInBed(pos, force);
-                sleepProbeState = 1;
-                return;
-            } catch (NoSuchMethodError e) {
-                sleepProbeState = 2;
-            }
-        } else if (sleepProbeState == 1) {
-            nms.startSleepInBed(pos, force);
-            return;
-        }
         if (sleepReflect == null) {
             synchronized (NmsPlayerSpawner.class) {
                 if (sleepReflect == null) {
