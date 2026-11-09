@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.1.8 (Beta)
+
+Paper 1.21.11 crash fix - 2.1.7 broke older servers.
+
+### Fixed
+- **Server crash when a bot takes knockback on 1.21.x** - 2.1.7 wrote the 26.3-only `syncVelocity` field directly, which threw `NoSuchFieldError` and crashed the world tick. The flag is now set by reflection, trying `syncVelocity` then `hurtMarked`.
+- **Bot block clicks silently failing on 1.21.x** - the accept-teleport packet is now built with whichever constructor the server has (id only on 1.21.x, id + position + rotation on 26.3), so bots can use items on blocks again after a teleport.
+
+---
+
 ## v2.1.7 (Beta)
 
 Paper 26.3 support - fixes bot left/right-click doing nothing.
