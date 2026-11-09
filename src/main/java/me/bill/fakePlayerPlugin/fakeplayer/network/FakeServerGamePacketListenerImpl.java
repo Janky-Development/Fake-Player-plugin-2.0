@@ -153,6 +153,7 @@ public final class FakeServerGamePacketListenerImpl extends ServerGamePacketList
     private static Method setDeltaMovementMethod;
     private static Class<?> vec3Class;
     private static Field hasImpulseField;
+    private static Field syncVelocityField;
 
     private static Field scanXField, scanYField, scanZField;
 
@@ -283,7 +284,20 @@ public final class FakeServerGamePacketListenerImpl extends ServerGamePacketList
     }
 
     private void markVelocityChanged() {
-        this.player.syncVelocity = true;
+        try {
+            // 26.3 renamed Entity.hurtMarked to syncVelocity; a direct access crashes on 1.21.x.
+            if (syncVelocityField == null) {
+                syncVelocityField = findField(ServerPlayer.class, "syncVelocity", boolean.class);
+                if (syncVelocityField == null) {
+                    syncVelocityField = findField(ServerPlayer.class, "hurtMarked", boolean.class);
+                }
+            }
+            if (syncVelocityField != null) {
+                syncVelocityField.setBoolean(this.player, true);
+            }
+        } catch (Exception e) {
+            Config.debugNms("[KB-DEBUG] could not set syncVelocity/hurtMarked: " + e.getMessage());
+        }
         try {
             if (hasImpulseField == null) {
                 hasImpulseField = findField(ServerPlayer.class, "hasImpulse", boolean.class);

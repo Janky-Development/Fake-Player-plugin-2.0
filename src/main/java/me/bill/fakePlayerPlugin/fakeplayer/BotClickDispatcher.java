@@ -324,10 +324,23 @@ public final class BotClickDispatcher {
             if (awaitingPosField == null || awaitingTeleportIdField == null) return;
             if (awaitingPosField.get(nms.connection) == null) return;
             int pendingId = awaitingTeleportIdField.getInt(nms.connection);
-            Vec3 awaited = (Vec3) awaitingPosField.get(nms.connection);
-            new ServerboundAcceptTeleportationPacket(
-                            pendingId, awaited.x, awaited.y, awaited.z, nms.getYRot(), nms.getXRot())
-                    .handle(nms.connection);
+            // 1.21.x has ctor(int id); 26.3 added the position/rotation: ctor(int, double x3, float x2).
+            ServerboundAcceptTeleportationPacket packet = null;
+            for (var ctor : ServerboundAcceptTeleportationPacket.class.getConstructors()) {
+                Class<?>[] params = ctor.getParameterTypes();
+                if (params.length == 6 && params[0] == int.class) {
+                    Vec3 awaited = (Vec3) awaitingPosField.get(nms.connection);
+                    packet = (ServerboundAcceptTeleportationPacket) ctor.newInstance(
+                            pendingId, awaited.x, awaited.y, awaited.z, nms.getYRot(), nms.getXRot());
+                    break;
+                }
+                if (params.length == 1 && params[0] == int.class) {
+                    packet = (ServerboundAcceptTeleportationPacket) ctor.newInstance(pendingId);
+                    break;
+                }
+            }
+            if (packet == null) return;
+            packet.handle(nms.connection);
             Config.debugNms("BotClickDispatcher: confirmed pending teleport id=" + pendingId + " for "
                     + nms.getScoreboardName());
         } catch (Throwable t) {
